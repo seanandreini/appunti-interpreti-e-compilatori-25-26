@@ -168,3 +168,341 @@ La sotto-espressione $(b - c)$ viene calcolata una sola volta e il nodo risultan
 
 \end{tikzpicture}
 \end{center}
+
+%lezione 26 novembre
+\subsection{Grafi diretti aciclici delle espressioni}
+
+\subsubsection{Definizione guidata dalla sintassi per la costruzione di alberi sintattici e DAG}
+
+Per costruire un grafo si utilizzano le funzioni costruttore \texttt{Leaf} e \texttt{Node}.
+Per esempio, prima di costruire un nuovo nodo $Node(op, left, right)$, dobbiamo verificare se esiste un nodo con etichetta $op$ e con figli $left$ e $right$, in quest'ordine. Se tale nodo esiste la funzione $Node()$ lo restituisce, altrimenti ne crea uno nuovo.
+
+\begin{center}
+\begin{tabular}{lll}
+\hline
+& \textbf{Produzione} & \textbf{Regole semantiche} \\
+\hline
+1) & $E \to E_1 + T$ & $E.node = \textbf{new } Node('+', E_1.node, T.node)$ \\
+2) & $E \to E_1 - T$ & $E.node = \textbf{new } Node('-', E_1.node, T.node)$ \\
+3) & $E \to T$ & $E.node = T.node$ \\
+4) & $T \to ( E )$ & $T.node = E.node$ \\
+5) & $T \to \textbf{id}$ & $T.node = \textbf{new } Leaf(\textbf{id}, \textbf{id}.entry)$ \\
+6) & $T \to \textbf{num}$ & $T.node = \textbf{new } Leaf(\textbf{num}, \textbf{num}.val)$ \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsubsection{Esempio 6.2: Costruzione di un DAG complesso}
+
+La sequenza di passi indicati di seguito costruisce il DAG mostrato nella figura successiva, a patto che le funzioni $Leaf()$ e $Node()$ ritornino un nodo già esistente, secondo quanto appena discusso, quando ciò è possibile.
+Consideriamo l'espressione:
+\[ a + a * (b - c) + (b - c) * d \]
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.5cm,
+        every node/.style={circle, draw, minimum size=0.9cm, inner sep=0pt},
+        level 1/.style={sibling distance=7cm},
+        level 2/.style={sibling distance=3.5cm},
+        level 3/.style={sibling distance=2cm}
+    ]
+        % --- LIVELLO 0 (Radice) ---
+        \node (p13) at (0, 0) {+};
+        \node[draw=none, right=0.3cm of p13] {$p_{13}$};
+
+        % --- LIVELLO 1 ---
+        % Nodo + a sinistra
+        \node (p7) at (-3.5, -1.5) {+};
+        \node[draw=none, left=0.3cm of p7] {$p_7$};
+
+        % Nodo * a destra (CORRETTO: p12)
+        \node (p12) at (3.5, -1.5) {*};
+        \node[draw=none, right=0.3cm of p12] {$p_{12}$};
+
+        % --- LIVELLO 2 ---
+        % Sotto p7 (+)
+        \node (p1) at (-5, -3) {\textbf{a}};
+        \node[draw=none, left=0.3cm of p1] {$p_1$};
+
+        \node (p6) at (-2, -3) {*};
+        \node[draw=none, right=0.3cm of p6] {$p_6$};
+
+        % Sotto p12 (*)
+        \node (p10) at (2, -3) {-};
+        \node[draw=none, right=0.3cm of p10] {$p_{10}$};
+
+        % Nodo d (CORRETTO: p11)
+        \node (p11) at (5, -3) {\textbf{d}};
+        \node[draw=none, right=0.3cm of p11] {$p_{11}$};
+
+        % --- LIVELLO 3 ---
+        % Sotto p6 (*)
+        \node (p2) at (-3, -4.5) {\textbf{a}};
+        \node[draw=none, below=0.1cm of p2] {$p_2$};
+
+        % Nodo - di sinistra (CORRETTO: p5)
+        \node (p5) at (-1, -4.5) {-};
+        \node[draw=none, right=0.3cm of p5] {$p_5$};
+
+        % Sotto p10 (-)
+        % Nodo b di destra (CORRETTO: p8)
+        \node (p8) at (1, -4.5) {\textbf{b}};
+        \node[draw=none, below=0.1cm of p8] {$p_8$};
+
+        \node (p9) at (3, -4.5) {\textbf{c}};
+        \node[draw=none, right=0.3cm of p9] {$p_9$};
+
+        % --- LIVELLO 4 ---
+        % Sotto il nodo - di sinistra (p5)
+        \node (p3) at (-2, -6) {\textbf{b}};
+        \node[draw=none, below=0.1cm of p3] {$p_3$};
+
+        \node (p4) at (0, -6) {\textbf{c}};
+        \node[draw=none, below=0.1cm of p4] {$p_4$};
+
+        % --- ARCHI ---
+        \draw (p13) -- (p7);
+        \draw (p13) -- (p12);
+
+        \draw (p7) -- (p1);
+        \draw (p7) -- (p6);
+
+        \draw (p12) -- (p10);
+        \draw (p12) -- (p11);
+
+        \draw (p6) -- (p2);
+        \draw (p6) -- (p5);
+
+        \draw (p10) -- (p8);
+        \draw (p10) -- (p9);
+
+        \draw (p5) -- (p3);
+        \draw (p5) -- (p4);
+
+    \end{tikzpicture}
+    \caption{L'Albero Sintattico per l'espressione $a + a * (b - c) + (b - c) * d$ senza condivisione.}
+\end{figure}
+
+Assumiamo che $entry\text{-}a$ sia un puntatore all'elemento della tabella dei simboli relativo ad \textbf{a}, e così per gli altri identificatori. Alla seconda invocazione di $Leaf(\textbf{id}, entry\text{-}a)$, alla linea 2, la funzione restituisce il puntatore al nodo precedentemente costruito, ovvero $p_2 = p_1$. Analogamente, i nodi restituiti ai passi 8 e 9 coincidono con quelli restituiti ai passi 3 e 4 (cioè $p_8 = p_3$ e $p_9 = p_4$). Di conseguenza, il nodo restituito al passo 10 deve essere lo stesso restituito al passo 5, cioè $p_{10} = p_5$.
+
+\bigskip
+\textbf{Sequenza dei puntatori:}
+\begin{enumerate}
+    \item $p_1 = Leaf(\textbf{id}, entry\text{-}a)$
+    \item $p_2 = Leaf(\textbf{id}, entry\text{-}a) = p_1$
+    \item $p_3 = Leaf(\textbf{id}, entry\text{-}b)$
+    \item $p_4 = Leaf(\textbf{id}, entry\text{-}c)$
+    \item $p_5 = Node('-', p_3, p_4)$
+    \item $p_6 = Node('*', p_1, p_5)$
+    \item $p_7 = Node('+', p_1, p_6)$
+    \item $p_8 = Leaf(\textbf{id}, entry\text{-}b) = p_3$
+    \item $p_9 = Leaf(\textbf{id}, entry\text{-}c) = p_4$
+    \item $p_{10} = Node('-', p_3, p_4) = p_5$
+    \item $p_{11} = Leaf(\textbf{id}, entry\text{-}d)$
+    \item $p_{12} = Node('*', p_5, p_{11})$
+    \item $p_{13} = Node('+', p_7, p_{12})$
+\end{enumerate}
+
+\bigskip
+\textbf{L'Albero Sintattico (DAG) diventa:}
+
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.5cm,
+        every node/.style={circle, draw, minimum size=0.9cm, inner sep=0pt},
+        level 1/.style={sibling distance=5cm},
+        level 2/.style={sibling distance=3cm}
+    ]
+        % Livello Radice (p13)
+        \node (p13) at (0,0) {+}; 
+        \node[draw=none, right=0.2cm of p13] {$p_{13}$};
+
+        % Livello 1 (p7, p12)
+        \node (p7) at (-2.5,-1.5) {+}; 
+        \node[draw=none, left=0.2cm of p7] {$p_7$};
+        
+        \node (p12) at (2.5,-1.5) {*}; 
+        \node[draw=none, right=0.2cm of p12] {$p_{12}$};
+
+        % Livello 2 (a, p6, d)
+        \node (a) at (-4,-3) {\textbf{a}}; 
+        \node[draw=none, left=0.2cm of a] {$p_1, p_2$};
+        
+        \node (p6) at (-1,-3) {*}; 
+        \node[draw=none, right=0.2cm of p6] {$p_6$};
+        
+        \node (d) at (4,-3) {\textbf{d}}; 
+        \node[draw=none, right=0.2cm of d] {$p_{11}$};
+
+        % Livello 3 (Nodo condiviso p5)
+        \node (p5) at (1.5,-4.5) {-}; 
+        \node[draw=none, right=0.2cm of p5] {$p_5, p_{10}$};
+
+        % Livello 4 (Foglie condivise b, c)
+        \node (b) at (0,-6) {\textbf{b}}; 
+        \node[draw=none, left=0.2cm of b] {$p_3, p_8$};
+        
+        \node (c) at (3,-6) {\textbf{c}}; 
+        \node[draw=none, right=0.2cm of c] {$p_4, p_9$};
+
+        % Archi
+        \draw (p13) -- (p7);
+        \draw (p13) -- (p12);
+        
+        \draw (p7) -- (a);
+        \draw (p7) -- (p6);
+        
+        \draw (p12) -- (p5);
+        \draw (p12) -- (d);
+        
+        \draw (p6) -- (a); % Riuso di a
+        \draw (p6) -- (p5); % Riuso di b-c
+        
+        \draw (p5) -- (b);
+        \draw (p5) -- (c);
+
+    \end{tikzpicture}
+    \caption{DAG per l'espressione $a + a * (b - c) + (b - c) * d$.}
+\end{figure}
+
+\vspace{1 cm}
+\subsection{Metodo del valore numerico per la costruzione di DAG}
+
+Come suggerito dalla figura seguente, i nodi di un albero sintattico sono spesso memorizzati in un \textbf{Array di Record}. Ogni riga dell'array rappresenta un record e quindi un nodo. In ogni record, il primo campo è un codice operativo che indica l'etichetta del nodo.
+Le foglie hanno un campo aggiuntivo contenente il valore lessicale; i nodi interni hanno due campi aggiuntivi che rappresentano i figli sinistro e destro.
+
+In questo array ci riferiamo ai nodi mediante l'indice del record corrispondente al nodo d'interesse. Storicamente, tale indice è stato chiamato \textbf{valore numerico} o \textit{value number} del nodo o dell'espressione che esso rappresenta.
+Chiamiamo \textbf{Firma (Signature)} di un nodo interno la tripla $\langle op, l, r \rangle$, in cui $op$ è l'etichetta, $l$ il valore numerico del figlio sinistro e $r$ quello del figlio destro.
+
+\vspace{3 cm}
+\textbf{Esempio:} $i = i + 10$
+
+\begin{figure}[h!]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \begin{tikzpicture}[node distance=1.5cm, auto, >=latex]
+            \node[circle, draw] (eq) {=};
+            \node[circle, draw, below right=of eq] (plus) {+};
+            \node[draw=none, below left=of eq] (i) {i};
+            \node[draw=none, below right=of plus] (ten) {10};
+
+            \draw[->] (eq) to [bend right] (i);
+            \draw[->] (eq) -- (plus);
+            \draw[->] (plus) -- (i);
+            \draw[->] (plus) -- (ten);
+        \end{tikzpicture}
+        \caption{(a) DAG}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \centering
+        \begin{tabular}{|c|c|c|c|}
+        \hline
+        1 & \textbf{id} & \multicolumn{2}{c|}{$i$} \\ \hline
+        2 & \textbf{num} & \multicolumn{2}{c|}{10} \\ \hline
+        3 & + & 1 & 2 \\ \hline
+        4 & = & 1 & 3 \\ \hline
+        \end{tabular}
+        \caption{(b) Array}
+    \end{minipage}
+    \caption{Nodi del DAG di $i = i + 10$ allocati in un array.}
+\end{figure}
+
+\subsubsection{Algoritmo 6.3}
+
+\textbf{Algoritmo 6.3: Metodo del valore numerico per la costruzione dei nodi di un DAG.}
+
+\begin{itemize}
+    \item \textbf{INPUT:} L'etichetta $op$, il nodo $l$ e il nodo $r$.
+    \item \textbf{OUTPUT:} Il valore numerico di un nodo nell'array con firma $\langle op, l, r \rangle$.
+    \item \textbf{METODO:} Si cerchi nell'array un nodo $M$ con etichetta $op$, figlio sinistro $l$ e figlio destro $r$. Se un tale nodo esiste, si restituisca il valore numerico di $M$. Altrimenti si crei un nuovo nodo $N$ con etichetta $op$, figlio sinistro $l$ e figlio destro $r$ e si restituisca il suo valore numerico.
+\end{itemize}
+
+\subsubsection{Struttura dati per la ricerca (Tabella Hash)}
+
+Per costruire una tabella di hash per i nodi di un DAG, abbiamo bisogno di una \textit{funzione di hash} che calcola l'indice del gruppo data una firma $\langle op, l, r \rangle$ in maniera tale da distribuire il più uniformemente possibile le firme nei vari gruppi.
+Un array, indicizzato in base al valore della funzione di hash, contiene i puntatori alle teste delle varie liste.
+
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture}
+        % Array delle teste (Bucket)
+        \draw (0,0) rectangle (1,4);
+        \node at (0.5, 3.5) {0};
+        \node at (0.5, 2.5) {...};
+        \node at (0.5, 1.5) {9};
+        \node at (0.5, 0.5) {20};
+        \node[left, align=right] at (0, 2) {Array delle teste\\delle liste indicizzato\\dalla funzione di hash};
+        
+        % Bucket 9 punta alla lista
+        \draw[-latex] (1, 1.5) -- (2.5, 1.5);
+        \draw (2.5, 1.2) rectangle (3.5, 1.8) node[midway] {25};
+        \draw (3.5, 1.2) rectangle (4.0, 1.8); 
+        \draw[-latex] (3.75, 1.5) -- (5.0, 1.5);
+        \draw (5.0, 1.2) rectangle (6.0, 1.8) node[midway] {3};
+        \draw (6.0, 1.2) rectangle (6.5, 1.8); 
+        
+        % Bucket 20 punta alla lista
+        \draw[-latex] (1, 0.5) -- (2.5, 0.5);
+        \draw (2.5, 0.2) rectangle (3.5, 0.8) node[midway] {2};
+        \draw (3.5, 0.2) rectangle (4.0, 0.8);
+        
+        \node[above] at (4.5, 2) {Elementi della lista che rappresentano i nodi};
+    \end{tikzpicture}
+    \caption{Struttura dati per la ricerca degli elementi in un gruppo.}
+\end{figure}
+
+La ricerca del VN di una firma $\langle op, l, r \rangle$ procede cercando il nodo richiesto all'interno della lista $h(\langle op, l, r \rangle)$.
+\begin{itemize}
+    \item Si scorre la lista alla ricerca di un elemento la cui firma sia $\langle op, l, r \rangle$.
+    \item \textbf{SE} si trova un tale elemento, se ne restituisce il valore numerico.
+    \item \textbf{ALTRIMENTI}, si aggiunge alla lista un elemento con firma $\langle op, l, r \rangle$ e se ne restituisce il VN.
+\end{itemize}
+
+\subsection{Codice a 3 Indirizzi}
+
+Esempio:
+\begin{verbatim}
+x = y op z
+x + y * z
+    t1 = y * z
+    t2 = x + t1
+\end{verbatim}
+
+Consideriamo ora le più comuni istruzioni a tre indirizzi che utilizzeremo nel resto di questa trattazione.
+Un indirizzo può assumere una delle seguenti forme:
+\begin{enumerate}
+    \item \textbf{Un nome.} Per comodità, nel codice a tre indirizzi utilizzeremo direttamente i nomi degli identificatori così come appaiono nel codice sorgente.
+    \item \textbf{Una costante.} In pratica un compilatore deve trattare molti tipi diversi di costanti e variabili.
+    \item \textbf{Un nome temporaneo} generato dal compilatore, ogni volta che una variabile temporanea sia necessaria.
+\end{enumerate}
+
+\subsubsection{Le istruzioni più comuni}
+
+\begin{enumerate}
+    \item \textbf{Istruzioni di assegnamento del tipo $x = y \ op \ z$}, in cui $op$ è un operatore binario aritmetico o logico e $x$, $y$ e $z$ sono indirizzi.
+    
+    \item \textbf{Istruzioni di assegnamento del tipo $x = op \ z$}, in cui $op$ indica un'operazione unaria. (Es. meno unario, la negazione logica.)
+    
+    \item \textbf{Istruzioni di copia del tipo $x = y$}, secondo cui a $x$ viene assegnato il valore di $y$.
+    
+    \item \textbf{Istruzioni di salto incondizionato del tipo \texttt{goto L}}, secondo cui la successiva istruzione a essere eseguita sarà quella con etichetta simbolica $L$.
+    
+    \item \textbf{Istruzioni di salto condizionato del tipo \texttt{if x goto L} oppure \texttt{ifFalse x goto L}}. Queste istruzioni fanno sì che l'istruzione successiva a essere eseguita sia quella indicata dall'etichetta $L$ se la condizione $x$ è rispettivamente vera oppure falsa. In entrambi i casi, qualora la condizione non sia soddisfatta sarà l'istruzione immediatamente successiva a essere eseguita, seguendo pertanto il normale flusso di esecuzione.
+    
+    \item \textbf{Istruzioni di salto condizionato del tipo \texttt{if x relop y goto L}}. Tali istruzioni applicano l'operatore relazionale $relop$ ($<, \le, ==, \dots$) agli operandi $x$ e $y$; se tali operandi soddisfano la relazione indicata esse fanno sì che la successiva istruzione a essere eseguita sia quella con etichetta $L$. In caso contrario, sarà l'istruzione immediatamente successiva a essere eseguita, seguendo pertanto il normale flusso di esecuzione.
+    
+    \item \textbf{Chiamata di procedura e ritorno da procedura.} Le chiamate di procedura sono implementate mediante una istruzione \texttt{param x} per ogni parametro, una istruzione \texttt{call p, n} oppure \texttt{y = call p, n} per la chiamata vera e propria della procedura o della funzione e, infine, una istruzione \texttt{return y} -- in cui l'indirizzo $y$ è opzionale -- che indica il valore restituito al chiamante.
+    \\
+    Generata in corrispondenza della chiamata di procedura $p(x_1, x_2, \dots, x_n)$. Il valore intero $n$, che indica il numero dei parametri in una chiamata del tipo \texttt{call p, n}, non è ridondante, poiché le chiamate possono essere annidate. In altre parole può accadere che alcune delle prime istruzioni \texttt{param} siano parte di una chiamata che avviene dopo che $p$ ha restituito il suo valore, che diviene pertanto un ulteriore parametro per la seconda chiamata. 
+    
+    \item \textbf{Istruzioni di copia indicizzata del tipo $x = y[i]$ oppure $x[i] = y$}. La prima istruzione assegna a $x$ il valore che si trova $i$ posizioni dopo la locazione di memoria indicata da $y$. Analogamente, la seconda istruzione assegna il valore $y$ alla locazione di memoria che si trova $i$ posizioni dopo quella relativa a $x$.
+    
+    \item \textbf{Assegnamenti di puntatori e indirizzi del tipo $x = \&y$, $x = *y$ oppure $*x = y$}. 
+    L'istruzione $x = \&y$ assegna a $x$, precisamente all'r-value di $x$, l'indirizzo di $y$, cioè il suo l-value. Presumibilmente $y$ è un nome, eventualmente temporaneo, che denota una espressione avente un l-value definito, come \texttt{A[i][j]}, mentre $x$ è il nome di un puntatore oppure una variabile temporanea. 
+    Nell'istruzione $x = *y$, presumibilmente $y$ è un puntatore o una variabile temporanea il cui r-value indica una locazione di memoria; in tal caso $x$ (il suo r-value) assume il valore di tale locazione. 
+    Infine, l'istruzione $*x = y$ assegna il valore di $y$ all'r-value dell'oggetto puntato da $x$.
+\end{enumerate}
+

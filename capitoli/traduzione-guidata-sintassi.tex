@@ -6,9 +6,9 @@ Associando attributi ai simboli grammaticali, si definiscono valori tramite rego
 
 È una grammatica context-free con l'aggiunta di attributi e regole semantiche. Gli attributi sono associati ai simboli della grammatica, le regole semantiche sono associate alle produzioni.
 
-\textbf{Osservazione:} Dato un simbolo della grammatica \(X\) e uno dei suoi attributi \(a\), si indica \(X.a\).
+\textbf{Osservazione:} Dato un simbolo della grammatica \(X\) e uno dei suoi attributi \(a\), si indica \(X.a\) (il valore di a per uno specifico nodo dell'albero di parsing con etichetta X).
 
-Una SSD che contiene solo attributi sintetizzati è detta \textbf{S-attribuita}. Ogni regola calcola un attributo associato alla variabile della parte sinistra della produzione mediante gli attributi associati ai simboli della parte destra. Una SSD senza effetti collaterali è detta \textbf{grammatica ad attributi}.
+Una SSD che contiene solo attributi sintetizzati è detta \textbf{S-attribuita}, cioè dove ogni regola calcola un attributo associato alla variabile della parte sinistra della produzione mediante gli attributi associati ai simboli della parte destra. Una SSD senza effetti collaterali (qualcosa che modifica lo stato del sistema oltre a restituire un valore, tipo stampare a video) è detta \textbf{grammatica ad attributi}.
 
 \subsection{Valutazione di una SSD ai nodi di un albero di parsing}
 
@@ -213,34 +213,39 @@ Una definizione guidata dalla sintassi è S-attribuita se e solo se ogni suo att
 
 \subsection{Grammatiche L-attribuite}
 
-Gli attributi associati ai simboli della parte destra di una regola, nel grafo delle dipendenze, possono avere archi orientati da sinistra a destra. Gli attributi ereditati possono utilizzare attributi ereditati o sintetizzati da sinistra e dalla stessa occorrenza, evitando cicli.
+Una definizione è L-attribuita se, nel grafo delle dipendenze, gli archi vanno solo da sinistra a destra. In particolare:
+\begin{itemize}
+    \item Gli attributi ereditati possono dipendere solo da attributi (ereditati o sintetizzati) dei simboli alla loro \textbf{sinistra} o da attributi ereditati del padre.
+    \item Questo vincolo è necessario per evitare cicli e permettere la valutazione in una sola passata.
+\end{itemize}
 
-\subsubsection*{}
-Non sempre le regole semantiche bastano, si inseriscono delle regole semantiche dette \textbf{effetti controllati}, che producono una traduzione corretta (stampe o interazione con la tavola dei simboli).
-\subsubsection*{}
-Permessi in modo che la traduzione per ogni ordinamento sia comunque corretta. I vincoli sono visti come archi impliciti.
+\paragraph{Effetti Controllati}
+Non sempre le pure regole semantiche bastano. Spesso si introducono \textbf{effetti controllati} (es. \texttt{print}, aggiornamento della Symbol Table).
+\begin{itemize}
+    \item Questi effetti sono permessi in modo che la traduzione risulti corretta per qualsiasi ordinamento di valutazione valido.
+    \item I vincoli di ordine imposti dagli effetti laterali vengono trattati come \textbf{archi impliciti} nel grafo delle dipendenze.
+\end{itemize}
 
 \subsection{Alberi sintattici}
-
-È utile trasformare una stringa in ingresso in un albero che ne rappresenta la struttura.
+È utile trasformare una stringa in ingresso in un albero che ne rappresenta la struttura gerarchica (albero sintattico) per facilitare le fasi successive della compilazione.
 
 \subsection{Classi di SDT implementabili durante il parsing}
-
-Due classi di SDT che consentono l'implementazione dell'SDT durante il parsing:
+Esistono due classi principali di SDT che consentono l'implementazione della traduzione direttamente durante l'analisi sintattica:
 
 \begin{enumerate}
-    \item La grammatica sottostante può essere riconosciuta da un parser LR e la SDD è S-attribuita (bottom-up)
-    \item La grammatica sottostante può essere riconosciuta da un parser LL e la SDD è L-attribuita (top-down)
+    \item La grammatica sottostante può essere riconosciuta da un parser \textbf{LR} e la SDD è \textbf{S-attribuita} (approccio \textit{bottom-up}).
+    \item La grammatica sottostante può essere riconosciuta da un parser \textbf{LL} e la SDD è \textbf{L-attribuita} (approccio \textit{top-down}).
 \end{enumerate}
 
 \subsubsection{Marcatori e proprietà}
+Per gestire azioni semantiche in posizioni arbitrarie, si possono introdurre dei marcatori (non-terminali che producono $\epsilon$).
 
-\textbf{Proprietà:} Se la grammatica arricchita con i marcatori può essere trattata da un dato metodo di parsing, allora lo SDT corrispondente può essere implementato durante il parsing.
+\textbf{Proprietà:} Se la grammatica arricchita con i marcatori può essere trattata da un dato metodo di parsing, allora lo SDT corrispondente può essere implementato durante il parsing stesso.
 
 \subsection{SDT postfissi}
-
-Per una produzione \(A \to XYZ\) con azione alla fine.
-
+Un SDT si dice \textbf{postfisso} se, in ogni produzione, le azioni semantiche sono posizionate esclusivamente \textbf{alla fine} del corpo della produzione.
+\[ A \to X Y Z \{ \text{azione} \} \]
+Questi schemi sono ideali per l'implementazione durante il parsing bottom-up.
 \subsubsection{Schema di traduzione postfisso - Calcolatrice}
 
 \textbf{Produzioni, Regole sintattiche e SDT:}
@@ -413,6 +418,8 @@ Dove \(R.i\) è l'attributo ereditato e \(R.s\) è l'attributo sintetizzato di \
 
 \subsubsection{Esempio - Eliminazione ricorsione nelle espressioni}
 
+Si considerino le seguenti produzioni relative a \(E\), prese da uno SDT per la traduzione di espressioni dalla forma infissa alla forma postfissa.
+
 \textbf{SDT con ricorsione sinistra:}
 
 \begin{center}
@@ -427,18 +434,29 @@ Dove \(R.i\) è l'attributo ereditato e \(R.s\) è l'attributo sintetizzato di \
 \end{tabular}
 \end{center}
 
+\noindent Se applichiamo la trasformazione standard al non-terminale \(E\), identifichiamo le parti $\alpha$ (la parte ricorsiva) e $\beta$ (la base) trattando l'azione semantica come un simbolo terminale:
+
+\begin{itemize}
+    \item Il \textbf{resto della produzione ricorsiva sinistra} ($\alpha$) è:
+    \[ \alpha = + T \; \{ \text{print}('+'); \} \]
+    \item Il \textbf{corpo dell'altra produzione} ($\beta$) è:
+    \[ \beta = T \]
+\end{itemize}
+
+Introducendo il nuovo non-terminale \(R\) (che rappresenta il resto), si applica la regola \(E \to \beta R\) e \(R \to \alpha R \mid \varepsilon\), ottenendo:
+
 \textbf{SDT senza ricorsione sinistra:}
 
 \begin{center}
-\begin{tabular}{|l|l|}
+\begin{tabular}{|l|}
 \hline
-\textbf{Produzioni} & \textbf{Azioni semantiche} \\
+\textbf{Produzioni risultanti} \\
 \hline
-\(E \to T R\) & \\
+\(E \to T R\) \\
 \hline
-\(R \to + T\) \(\{\text{print}('+');\}\) \(R_1\) & \\
+\(R \to + T\) \(\{\text{print}('+');\}\) \(R\) \\
 \hline
-\(R \to \varepsilon\) & \\
+\(R \to \varepsilon\) \\
 \hline
 \end{tabular}
 \end{center}

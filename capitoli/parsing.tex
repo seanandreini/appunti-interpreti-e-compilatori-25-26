@@ -157,7 +157,7 @@ Nel \textbf{parser bottom-up} si parte dalla stringa e si cerca di ricostruire l
 \end{itemize}
 
 \subsection{Ricorsione Sinistra}
-Se una grammatica presenta ricorsione sinistra (diretta o indiretta), la discesa ricorsiva non funziona senza modifiche:
+Se una grammatica presenta ricorsione sinistra (diretta o indiretta), cioè un non-terminale ha una regola di produzione che inizia con se stesso, la \textbf{discesa ricorsiva non funziona} senza modifiche:
 \begin{itemize}
     \item \textbf{Ricorsione sinistra diretta:} Se la grammatica ha una produzione ricorsiva sinistra, ovvero:
         
@@ -180,7 +180,7 @@ Se una grammatica presenta ricorsione sinistra (diretta o indiretta), la discesa
     \begin{enumerate}
         \item Ordina i non-terminali.
         \item Sostituisci produzioni ricorsive.
-        \item Elimina la ricorsione immediata con una nuova variabile ausiliaria.
+        \item Elimina la ricorsione immediata con una nuova variabile ausiliaria (A).
     \end{enumerate}
 
     \item \textbf{Ricorsione sinistra indiretta:} La ricorsione sinistra può essere \textbf{non diretta}.
@@ -201,33 +201,33 @@ Se una grammatica presenta ricorsione sinistra (diretta o indiretta), la discesa
     \[
     \begin{array}{l}
     S \rightarrow Aa \mid b \\
-    A \rightarrow Ac \mid (Aa)d \mid b d \mid \varepsilon
+    A \rightarrow Ac \mid Aad \mid bd \mid \varepsilon
+    \end{array}
+    \]
+    (Nota: sostituendo $S \to Aa$ in $Sd$, otteniamo $Aad$).
+    
+    \textbf{Secondo passo:} si identificano le parti ricorsive ($\alpha$) e le parti non ricorsive ($\beta$) per evidenziare la ricorsione sinistra diretta:
+    
+    \[
+    \begin{array}{l}
+    \text{Produzioni di } A: A \rightarrow A(c) \mid A(ad) \mid bd \mid \varepsilon \\
+    \alpha_1 = c, \quad \alpha_2 = ad \\
+    \beta_1 = bd, \quad \beta_2 = \varepsilon
     \end{array}
     \]
     
-    \textbf{Secondo passo:} si raggruppa e riscrive per evidenziare la ricorsione sinistra diretta:
+    \textbf{Terzo passo:} si elimina la ricorsione sinistra diretta da $A$ introducendo la variabile ausiliaria $A'$ e applicando la regola $A \to \beta A'$ e $A' \to \alpha A' \mid \varepsilon$:
     
     \[
     \begin{array}{l}
     S \rightarrow Aa \mid b \\
-    A \rightarrow Ac \mid a d \mid b d \mid \varepsilon
+    A \rightarrow bd A' \mid A' \\
+    A' \rightarrow c A' \mid ad A' \mid \varepsilon
     \end{array}
     \]
-    (viene evidenziata la ricorsione sinistra in $A \rightarrow Ac$)
-    
-    \textbf{Terzo passo:} si elimina la ricorsione sinistra diretta da $A$ introducendo la variabile ausiliaria $A'$:
-    
-    \[
-    \begin{array}{l}
-    S \rightarrow Aa \mid b \\
-    A \rightarrow b d A' \mid a d A' \mid \varepsilon \\
-    A' \rightarrow c A' \mid a d A' \mid \varepsilon
-    \end{array}
-    \]
+    (Nota: la produzione $A \to A'$ deriva da $\beta_2 A'$ dove $\beta_2 = \varepsilon$).
     
     In questo modo, la grammatica risultante è \textbf{priva di ricorsione sinistra} e adatta per un parser con discesa ricorsiva.
-    
-    
 
     Esiste un algoritmo sistematico per eliminare la ricorsione sinistra dalle grammatiche:
 
@@ -323,12 +323,12 @@ C' \rightarrow cC' \mid \varepsilon \\
 
 \subsection{Fattorizzazione comune:}
 Se $A \rightarrow \alpha\beta_1 \mid \alpha\beta_2 \mid \ldots \mid \alpha\beta_k \mid \gamma_1 \mid \gamma_2 \mid \ldots \mid \gamma_n$ \\
-con $\alpha$ prefisso più lungo comune, allora si può riscrivere come:
+con $\alpha$ prefisso più lungo comune, allora si può riscrivere, raccogliendo per $\alpha$, come:
 
 \[
 \begin{aligned}
 A &\rightarrow \alpha A' \mid \gamma_1 \mid \gamma_2 \mid \ldots \mid \gamma_n \\
-A' &\rightarrow \beta_1 \mid \beta_2 \mid \ldots \mid \beta_k
+A' &\rightarrow \beta_1 \mid \beta_2 \mid \ldots \mid \beta_k 
 \end{aligned}
 \]
 
@@ -446,7 +446,7 @@ A → Ba | S
     \begin{itemize}
         \item Si aggiunge il marcatore ``\$'' (fine stringa) a FOLLOW del simbolo di partenza.
         \item Se una variabile \(X\) può essere seguita da una stringa \(Y\), si aggiunge \(\mathrm{FIRST}(Y)\) a FOLLOW\((X)\).
-        \item Se \(X\) è alla fine di una produzione, si aggiunge il FOLLOW della variabile precedente.
+        \item Se \(X\) è alla fine di una produzione, si aggiunge il FOLLOW della variabile precedente (Testa della Produzione).
     \end{itemize}
 \end{itemize}
 
@@ -503,7 +503,7 @@ F   &\rightarrow\ (E)\ \mid\ \mathrm{id} \\
 \]
 possiamo affermare:
 \begin{enumerate}
-  \item $\mathrm{FIRST}(F) = \mathrm{FIRST}(T) = \mathrm{FIRST}(E) = \{ (,\, \mathrm{id} ) \}$.
+  \item $\mathrm{FIRST}(F) = \mathrm{FIRST}(T) = \mathrm{FIRST}(E) = \{ (,\, \mathrm{id}  \}$.
   Per capire il perché, si noti che le due produzioni per $F$ hanno corpi che iniziano con i due simboli terminali $\mathrm{id}$ e parentesi aperta. $T$ ha una sola produzione il cui corpo inizia con $F$. Dato che $F$ non deriva $\varepsilon$, $\mathrm{FIRST}(T)$ deve coincidere con $\mathrm{FIRST}(F)$. Si ragiona poi allo stesso modo per $\mathrm{FIRST}(E)$.
 
   \item $\mathrm{FIRST}(E') = \{+,\, \varepsilon\}$. La ragione è che il corpo di una delle due produzioni per $E'$ inizia con il terminale $+$ e il corpo dell’altra è $\varepsilon$. Ogni volta che un non-terminale deriva $\varepsilon$, dobbiamo aggiungere $\varepsilon$ all’insieme $\mathrm{FIRST}$ di quel non-terminale.
@@ -570,7 +570,7 @@ for (i = 1; i <= n; i++) {
 
 Dove:
 \begin{itemize}
-    \item $V$ è l'insieme dei simboli non terminali della grammatica.
+    \item $V$ è l'insieme dei simboli non terminali della grammatica (variabili).
     \item $a$ è il simbolo corrente dell’input (lookahead token).
     \item \texttt{next.token} restituisce il prossimo simbolo dell’input.
 \end{itemize}
@@ -655,12 +655,12 @@ F   & F \rightarrow \mathrm{id} &   &   & F \rightarrow (E) &   &   \\
   \textbf{Riconosciuta} & \textbf{Stack}   & \textbf{Input}         & \textbf{Azione} \\ \hline
                         & $E\$$            & $id\ +\ id\ *\ id\$ $  &                 \\ \hline
                         & $TE'\$$           & $id\ +\ id\ *\ id\$ $  & output $E \to TE'$ \\ \hline
-                        & $FTE'\$$          & $id\ +\ id\ *\ id\$ $  & output $T \to FT'$ \\ \hline
+                        & $FT'E'\$$          & $id\ +\ id\ *\ id\$ $  & output $T \to FT'$ \\ \hline
   $id$                  & $T'E'\$$          & $+ id\ *\ id\$ $       & consuma $id$     \\ \hline
   $id$                  & $E'\$$            & $+ id\ *\ id\$ $       & output $T' \to e$ \\ \hline
   $id$                  & $+TE'\$$          & $+ id\ *\ id \$ $      & output $E' \to +TE'$ \\ \hline
   $id\ +$               & $TE'\$$           & $id\ *\ id\$ $         & consuma $+$      \\ \hline
-  $id\ +$               & $FTE'\$$          & $id\ *\ id\$ $         & output $T \to FT'$ \\ \hline
+  $id\ +$               & $FT'E'\$$          & $id\ *\ id\$ $         & output $T \to FT'$ \\ \hline
   $id\ + id$            & $T'E'\$$          & $*\ id\$ $             & consuma $id$     \\ \hline
   $id\ + id$            & $*FT'E'\$$        & $*\ id\$ $             & output $T' \to *FT'$ \\ \hline
   $id\ + id\ *$         & $FT'E'\$$         & $id\$ $                & consuma $*$      \\ \hline
@@ -712,24 +712,202 @@ F \to id \mid (E)
 \vspace{1em}
 Sequenze di parsing (esempio con simboli):
 
-\begin{tabbing}
-id * id \quad \= F * id \quad \= T * id \quad \= T * F \quad \= T \quad \= E \\
-id \quad \= F \quad \= F \quad \= T * F \quad \= T \\
-id \quad \= F \quad \= id \quad \= T * F \\
-id \quad \= F \quad \= id \\
-id
-\end{tabbing}
+\begin{figure}[h]
+    \centering
+    % Configurazione stile alberi
+    \tikzset{
+        level distance=20pt,      % Distanza verticale tra i livelli
+        sibling distance=5pt,     % Distanza orizzontale tra i nodi
+        every node/.style={inner sep=1pt, font=\small},
+        edge from parent/.style={draw, thin}
+    }
 
-\vspace{1em}
+    % --- Passo 1: Stringa iniziale (Livello 0) ---
+    \begin{tikzpicture}[baseline=0cm]
+        \node at (0,0) {\textbf{id} $*$ \textbf{id}};
+        % Rettangolo invisibile per mantenere l'altezza coerente con gli altri
+        \path (0,3); 
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 2: Riduzione id -> F (F sale a livello 1) ---
+    \begin{tikzpicture}[baseline=0cm]
+        % Albero F posizionato a y=20pt (Livello 1)
+        \node at (0, 20pt) {F}
+            child {node {\textbf{id}}};
+        \node [right=0.2cm] at (0,0) {$*$ \textbf{id}};
+        \path (0,3);
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 3: Riduzione F -> T (T sale a livello 2) ---
+    \begin{tikzpicture}[baseline=0cm]
+        % Albero T posizionato a y=40pt (Livello 2)
+        \node at (0, 40pt) {T}
+            child {node {F}
+                child {node {\textbf{id}}}
+            };
+        \node [right=0.2cm] at (0,0) {$*$ \textbf{id}};
+        \path (0,3);
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 4: Riduzione secondo id -> F ---
+    \begin{tikzpicture}[baseline=0cm]
+        % Primo albero (T) fermo a livello 2
+        \node at (0, 40pt) {T}
+            child {node {F}
+                child {node {\textbf{id}}}
+            };
+        % Simbolo * in basso
+        \node at (0.35, 0) {$*$};
+        % Secondo albero (F) a livello 1
+        \node at (0.7, 20pt) {F}
+            child {node {\textbf{id}}};
+        \path (0,3);
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 5: Riduzione T * F -> T (Nuovo T sale a livello 3) ---
+    \begin{tikzpicture}[baseline=0cm]
+        % Albero T risultante a y=60pt (Livello 3)
+        \node at (0.35, 60pt) {T}
+            child {node {T}
+                child {node {F}
+                    child {node {\textbf{id}}}
+                }
+            }
+            child {node {$*$}}
+            child {node {F}
+                child {node {\textbf{id}}}
+            };
+        \path (0,3);
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 6: Riduzione T -> E (E sale a livello 4) ---
+    \begin{tikzpicture}[baseline=0cm]
+        % Albero E finale a y=80pt (Livello 4)
+        \node at (0.35, 80pt) {E}
+            child {node {T}
+                child {node {T}
+                    child {node {F}
+                        child {node {\textbf{id}}}
+                    }
+                }
+                child {node {$*$}}
+                child {node {F}
+                    child {node {\textbf{id}}}
+                }
+            };
+        \path (0,3);
+    \end{tikzpicture}
+\end{figure}
+
+\vspace{2 cm}
 Sequenze con somma:
 
-\begin{tabbing}
-id + id \quad \= F + id \quad \= T + id \quad \= E + id \quad \= E + F \quad \= E + T \quad \= E \\
-id \quad \= F \quad \= T \quad \= T + id \quad \= T \quad \= F \quad \= E + T \\
-id \quad \= F \quad \= F \quad \= F \quad \= id \quad \= T \quad \= F \\
-id \quad \= id \quad \= id \quad \= F \quad \= id \\
-id
-\end{tabbing}
+\begin{figure}[h]
+    \centering
+    % Configurazione stile alberi
+    \tikzset{
+        level distance=20pt,      
+        sibling distance=5pt,     
+        every node/.style={inner sep=1pt, font=\small},
+        edge from parent/.style={draw, thin}
+    }
+
+    % --- Passo 1: Stringa iniziale ---
+    \begin{tikzpicture}[baseline=0cm]
+        \node at (0,0) {\textbf{id}};
+        \node at (0.35,0) {$+$};
+        \node at (0.7,0) {\textbf{id}};
+        \path (0,3); % Spazio verticale per allineamento
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 2: Primo id -> F ---
+    \begin{tikzpicture}[baseline=0cm]
+        \node at (0, 20pt) {F}
+            child {node {\textbf{id}}};
+        \node at (0.35,0) {$+$};
+        \node at (0.7,0) {\textbf{id}};
+        \path (0,3);
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 3: F -> T ---
+    \begin{tikzpicture}[baseline=0cm]
+        \node at (0, 40pt) {T}
+            child {node {F}
+                child {node {\textbf{id}}}
+            };
+        \node at (0.35,0) {$+$};
+        \node at (0.7,0) {\textbf{id}};
+        \path (0,3);
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 4: T -> E (Per preparare la somma E + T) ---
+    \begin{tikzpicture}[baseline=0cm]
+        \node at (0, 60pt) {E}
+            child {node {T}
+                child {node {F}
+                    child {node {\textbf{id}}}
+                }
+            };
+        \node at (0.35,0) {$+$};
+        \node at (0.7,0) {\textbf{id}};
+        \path (0,3);
+    \end{tikzpicture}
+    
+    \vspace{1cm} % Andiamo a capo per la seconda riga di passaggi
+    
+    % --- Passo 5: Secondo id -> F ---
+    \begin{tikzpicture}[baseline=0cm]
+        % Albero E a sinistra
+        \node at (0, 60pt) {E}
+            child {node {T}
+                child {node {F}
+                    child {node {\textbf{id}}}
+                }
+            };
+        \node at (0.35,0) {$+$};
+        % Albero F a destra
+        \node at (0.7, 20pt) {F}
+            child {node {\textbf{id}}};
+        \path (0,3);
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 6: F -> T ---
+    \begin{tikzpicture}[baseline=0cm]
+        % Albero E a sinistra
+        \node at (0, 60pt) {E}
+            child {node {T}
+                child {node {F}
+                    child {node {\textbf{id}}}
+                }
+            };
+        \node at (0.35,0) {$+$};
+        % Albero T a destra
+        \node at (0.7, 40pt) {T}
+            child {node {F}
+                child {node {\textbf{id}}}
+            };
+        \path (0,3);
+    \end{tikzpicture}
+    \hfill
+    % --- Passo 7: Riduzione E + T -> E ---
+    \begin{tikzpicture}[baseline=0cm]
+        \node at (0.35, 80pt) {E}
+            child {node {E}
+                child {node {T}
+                    child {node {F}
+                        child {node {\textbf{id}}}
+                    }
+                }
+            }
+            child {node {$+$}}
+            child {node {T}
+                child {node {F}
+                    child {node {\textbf{id}}}
+                }
+            };
+        \path (0,3);
+    \end{tikzpicture}
+\end{figure}
 
 Gli analizzatori bottom-up partono da una stringa \( w \) e procedono a ritroso, effettuando una progressiva riduzione fino ad ottenere il simbolo distinto \( S \).
 
@@ -869,7 +1047,7 @@ S \to aSb \mid aAb, \quad A \to aAc \mid ac
 S \Rightarrow aSb \Rightarrow aaAbb \Rightarrow aaaAcbb \Rightarrow aaaaccbb
 \]
 
-\vspace{1em}
+\vspace{10 cm}
 \subsubsection*{Esempio parsing shift-reduce con prodotto}
 
 \begin{table}[h!]
@@ -983,12 +1161,12 @@ In entrambi i casi, dopo una riduzione, il parser deve fare zero o più shift pe
 
 Il parser non deve mai analizzare l’interno dello stack per trovare l’handle.
 
-\vspace{1em}
+\vspace{1 cm}
 \textbf{Problema fondamentale nel parsing shift-reduce:} Quando in cima allo stack si ha una parte destra di una regola, come si fa a sapere se è un handle e quindi si deve fare la riduzione, oppure se è necessario ancora uno shift?
 
 In cima allo stack potrebbero esserci parti destre di due regole diverse: quale si sceglie?
 
-\vspace{1em}
+\vspace{10 cm}
 \textbf{Esempio complesso di analisi:}
 
 
@@ -1046,11 +1224,7 @@ In cima allo stack potrebbero esserci parti destre di due regole diverse: quale 
 
 
 \section*{Parsing LR: concetti di base}
-
-Problema: quando in cima allo stack c'è la parte destra di una regola, come si fa a sapere se è l’handle e si deve fare la riduzione oppure è necessario spostare ancora simboli?  
-In cima allo stack potrebbero esserci parti destre di regole diverse: quale si sceglie?
-
-Il parsing usato comunemente è LR(k):
+Il parsing usato comunemente per risolvere il problema è \textbf{LR(k)}:
 \begin{itemize}
 \item L (\textit{Left}): l’input viene letto da sinistra a destra.
 \item R (\textit{Rightmost}): si costruisce una derivazione destra.
@@ -1114,6 +1288,192 @@ F \to (E) \mid id
 Se $I = \{ [E' \to \cdot E] \}$, la $CLOSURE(I)$ conterrà:  
 $E \to \cdot E + T$, $E \to \cdot T$, $T \to \cdot T * F$, $T \to \cdot F$, $F \to \cdot (E)$, $F \to \cdot id$.
 
+Questa operazione di chiusura definisce il contenuto esatto del primo stato ($I_0$) dell'Automa LR(0) per la grammatica delle espressioni:
+
+\[
+\begin{array}{rcl}
+E & \to & E + T \mid T \\
+T & \to & T * F \mid F \\
+F & \to & ( E ) \mid \mathbf{id}
+\end{array}
+\]
+Partendo da questo stato iniziale, l'algoritmo calcola le transizioni (tramite la funzione \texttt{GOTO}) spostando il punto in avanti per ogni simbolo grammaticale. Ogni spostamento può generare un nuovo stato o portare a uno già esistente. 
+
+Ripetendo questo processo iterativamente per tutti gli stati scoperti, si ottiene la \textbf{Collezione Canonica LR(0)}, visualizzata nel seguente Automa a Stati Finiti (DFA):
+
+\vspace{1 cm}
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance=1.2cm and 1.5cm,
+        box/.style={
+            rectangle, 
+            draw, 
+            align=left, 
+            font=\scriptsize,
+            minimum width=1.8cm,
+            inner sep=3pt,
+            fill=white
+        },
+        arrow/.style={
+            -Latex, 
+            thick,
+            rounded corners=3pt
+        },
+        label_edge/.style={
+            pos=0.4,
+            fill=white, 
+            inner sep=1pt,
+            font=\footnotesize\bfseries
+        }
+    ]
+
+    % --- COLONNA PRINCIPALE (Sinistra) ---
+    % I0: Stato Iniziale
+    \node[box] (I0) {
+        \textbf{I$_0$}\\
+        $E' \to \cdot E$\\
+        \color{gray}$E \to \cdot E + T$\\
+        \color{gray}$E \to \cdot T$\\
+        \color{gray}$T \to \cdot T * F$\\
+        \color{gray}$T \to \cdot F$\\
+        \color{gray}$F \to \cdot ( E )$\\
+        \color{gray}$F \to \cdot \mathbf{id}$
+    };
+
+    % I2: Dopo aver letto T
+    \node[box, below=1.8cm of I0] (I2) {
+        \textbf{I$_2$}\\
+        $E \to T \cdot$\\
+        $T \to T \cdot * F$
+    };
+
+    % I4: Dopo aver letto '(' (Nodo centrale per ricorsioni)
+    \node[box, below=1.8cm of I2] (I4) {
+        \textbf{I$_4$}\\
+        $F \to ( \cdot E )$\\
+        \color{gray}$E \to \cdot E + T$\\
+        \color{gray}... (closure)
+    };
+
+    % I3: Dopo aver letto F
+    \node[box, below=1.8cm of I4] (I3) {
+        \textbf{I$_3$}\\
+        $T \to F \cdot$
+    };
+
+    % I5: Dopo aver letto id (Nodo centrale)
+    \node[box] (I5) at ($(I2)!0.5!(I4)$) {
+        \textbf{I$_5$}\\
+        $F \to \mathbf{id} \cdot$
+    };
+
+    % --- COLONNA SUPERIORE (Dopo E) ---
+    \node[box, right=2.5cm of I0] (I1) {
+        \textbf{I$_1$}\\
+        $E' \to E \cdot$\\
+        $E \to E \cdot + T$
+    };
+    \node[below=0.2cm of I1, font=\bfseries] (acc) {accept};
+
+    % --- COLONNA DESTRA (Dopo Operatori) ---
+    
+    % I6: Dopo E +
+    \node[box, right=2.5cm of I1] (I6) {
+        \textbf{I$_6$}\\
+        $E \to E + \cdot T$\\
+        \color{gray}$T \to \cdot T * F$\\
+        \color{gray}$T \to \cdot F$\\
+        \color{gray}...
+    };
+
+    % I7: Dopo T *
+    \node[box, right=2.5cm of I2] (I7) {
+        \textbf{I$_7$}\\
+        $T \to T * \cdot F$\\
+        \color{gray}$F \to \cdot ( E )$\\
+        \color{gray}$F \to \cdot \mathbf{id}$
+    };
+
+    % I8: Dopo ( E
+    \node[box, right=2.5cm of I4] (I8) {
+        \textbf{I$_8$}\\
+        $F \to ( E \cdot )$\\
+        $E \to E \cdot + T$
+    };
+
+    % --- COLONNA ESTREMA DESTRA (Finali) ---
+    
+    % I9: Dopo E + T
+    \node[box, right=2cm of I6] (I9) {
+        \textbf{I$_9$}\\
+        $E \to E + T \cdot$\\
+        $T \to T \cdot * F$
+    };
+
+    % I10: Dopo T * F
+    \node[box, right=2cm of I7] (I10) {
+        \textbf{I$_{10}$}\\
+        $T \to T * F \cdot$
+    };
+
+    % I11: Dopo ( E )
+    \node[box, right=2cm of I8] (I11) {
+        \textbf{I$_{11}$}\\
+        $F \to ( E ) \cdot$
+    };
+
+
+    % --- COLLEGAMENTI ---
+
+    % Da I0
+    \draw[arrow] (I0) -- node[above] {E} (I1);
+    \draw[arrow] (I1) -- (acc);
+    \draw[arrow] (I0) -- node[left] {T} (I2);
+    % Collegamenti lunghi da I0 a I4 e I5 usando percorsi a 'L'
+    \draw[arrow] (I0.west) -- ++(-0.5,0) |- node[label_edge, near start] {(} (I4.west);
+    \draw[arrow] (I0) |- node[label_edge, near end] {id} (I5); 
+    % Nota: collegamento I0->I3 per F
+    \draw[arrow] (I0.west) -- ++(-0.8,0) |- node[label_edge, near start] {F} (I3.west);
+
+    % Da I1
+    \draw[arrow] (I1) -- node[above] {+} (I6);
+
+    % Da I2
+    \draw[arrow] (I2) -- node[above] {*} (I7);
+
+    % Da I4 (Il nodo più complesso)
+    \draw[arrow] (I4) -- node[above] {E} (I8);
+    \draw[arrow] (I4) edge[loop left] node[left] {(} (I4);
+    \draw[arrow] (I4) -- node[left] {id} (I5);
+    \draw[arrow] (I4) -- node[left] {T} (I2); % Risale a I2
+    \draw[arrow] (I4) -- node[left] {F} (I3); % Scende a I3
+
+    % Da I6 (Simile a I0 ma spostato)
+    \draw[arrow] (I6) -- node[above] {T} (I9);
+    % I6 verso id e (
+    \draw[arrow] (I6.south) |- node[label_edge, near start] {id} (I5.east);
+    \draw[arrow] (I6.south west) to[out=-135, in=45] node[label_edge] {(} (I4.north east);
+    % I6 verso F -> I3 (Lungo giro)
+    \draw[arrow] (I6.east) -- ++(0.5,0) |- node[label_edge, near start] {F} (I3.east);
+
+    % Da I7
+    \draw[arrow] (I7) -- node[above] {F} (I10);
+    \draw[arrow] (I7) |- node[label_edge, near start] {id} (I5.east);
+    \draw[arrow] (I7.south west) to[out=-135, in=20] node[label_edge] {(} (I4.north east);
+
+    % Da I8
+    \draw[arrow] (I8) -- node[above] {)} (I11);
+    \draw[arrow] (I8) -- node[left] {+} (I6); % Risale per la somma
+
+    % Da I9
+    \draw[arrow] (I9) |- node[label_edge, near start] {*} (I7);
+
+    \end{tikzpicture}
+\end{figure}
+
+\vspace{20 cm}
+
 \section*{Algoritmi Closure e GOTO}
 \textbf{Chiusura (pseudocodice):}
 \begin{verbatim}
@@ -1165,8 +1525,7 @@ Ad ogni passo, se dallo stato $j$ c’è transizione col prossimo simbolo in ing
 \textbf{Quando si applica una riduzione $A \to X_1 X_2 \ldots X_n$}, si rimuovono $n$ stati dalla pila e si usa la funzione di transizione sull’ultimo stato rimasto e su $A$.
 
 \section*{Esempio tabella di parsing}
-
-\begin{table}[ht!]
+\begin{table}[H]
     \centering
     \renewcommand{\arraystretch}{1.25}
     \begin{tabular}{|c|c|c|c|}
@@ -1186,7 +1545,31 @@ Ad ogni passo, se dallo stato $j$ c’è transizione col prossimo simbolo in ing
     \end{tabular}
     \end{table}
     
+    L'esempio illustra le azioni del  parser shift-reduce durante l'analisi della stringa $\mathbf{id} * \mathbf{id}$, secondo l'automa LR(0), utilizzando uno stack per memorizzare gli stati dell'automa.
 
+    Il processo si basa su due meccanismi principali:
+    
+    \begin{enumerate}
+        \item \textbf{Lo Shift (Spostamento):}
+        Quando lo stato in cima allo stack ha una transizione etichettata con il simbolo corrente in ingresso, il parser "sposta" il simbolo nello stack.
+        \begin{itemize}
+            \item \textit{Esempio:} All'inizio (linea 1), lo stack contiene lo stato iniziale \textbf{0}. Il simbolo in ingresso è $\mathbf{id}$. Poiché esiste una transizione $0 \xrightarrow{\mathbf{id}} 5$, il parser impila lo stato \textbf{5} (che corrisponde al simbolo $\mathbf{id}$).
+        \end{itemize}
+    
+        \item \textbf{La Riduzione (Reduce):}
+        Quando lo stato corrente non ha transizioni uscenti per il simbolo in ingresso, ma contiene un item completo (es. $F \to \mathbf{id} \cdot$), si effettua una riduzione.
+        \begin{itemize}
+            \item \textit{Esempio:} Alla linea 2, siamo nello stato \textbf{5} e l'input è $*$. Non ci sono transizioni uscenti, quindi si riduce usando $F \to \mathbf{id}$.
+            \item \textbf{Meccanica della riduzione:}
+            \begin{enumerate}
+                \item Si rimuove dallo stack il corpo della produzione (in questo caso lo stato 5, corrispondente a $\mathbf{id}$).
+                \item Lo stato che riemerge in cima è lo stato \textbf{0}.
+                \item Si cerca la transizione dallo stato 0 sul simbolo testa della produzione ($F$). Poiché $0 \xrightarrow{F} 3$, si impila lo stato \textbf{3}.
+            \end{enumerate}
+        \end{itemize}
+    \end{enumerate}
+    
+    Un comportamento analogo avviene successivamente (linea 5): partendo dallo stato \textbf{7} (che corrisponde al simbolo $*$), se arriva un $\mathbf{id}$ si fa shift verso lo stato 5. Successivamente, riducendo $F \to \mathbf{id}$, si rimuove il 5, riemerge il 7, e poiché $7 \xrightarrow{F} 10$, si impila lo stato \textbf{10}.
 \section*{Nota}
 Se nello stato 2, in cima alla pila, il prossimo simbolo è $*$, si effettua shift.
 Se invece si facesse una riduzione, si rischierebbe di portare la macchina in errore.

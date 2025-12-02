@@ -1,0 +1,170 @@
+\section{Generazione del Codice Intermedio}
+
+In questa fase si considerano \textbf{3 aspetti} fondamentali:
+
+\begin{itemize}
+    \item \textbf{Rappresentazione intermedia}, che si divide in:
+    \begin{itemize}
+        \item Alberi sintattici / DAG
+        \item Codice a 3 indirizzi
+    \end{itemize}
+    \item \textbf{Analisi sintattica} (controlli di tipo).
+    \item \textbf{Generazione del codice intermedio}.
+\end{itemize}
+
+\subsection*{Flusso di compilazione (Front-end vs Back-end)}
+Il seguente schema illustra il flusso dei dati attraverso i componenti del compilatore:
+
+\begin{center}
+\begin{tikzpicture}[
+    node distance=1cm and 1cm,
+    auto,
+    block/.style={
+        rectangle, 
+        draw, 
+        text width=2cm, 
+        align=center, 
+        minimum height=3em
+    },
+    line/.style={draw, -latex}
+]
+
+    % Nodi
+    \node (start) {};
+    \node [block, right=0.5cm of start] (parser) {Parser};
+    \node [block, right=of parser] (checker) {Checker\\statico};
+    \node [block, right=of checker] (gen_int) {Generatore\\di codice\\intermedio};
+    \node [block, right=2.5cm of gen_int] (gen_cod) {Generatore\\di codice};
+    \node [right=0.5cm of gen_cod] (end) {};
+
+    % Frecce
+    \path [line] (start) -- (parser);
+    \path [line] (parser) -- (checker);
+    \path [line] (checker) -- (gen_int);
+    \path [line] (gen_int) -- node [above, font=\footnotesize] {codice} node [below, font=\footnotesize] {intermedio} (gen_cod);
+    \path [line] (gen_cod) -- (end);
+
+    % Linee Front-end / Back-end
+    % Linea orizzontale sotto
+    \draw [thin] ($(parser.south west) + (0,-0.8)$) -- ($(gen_cod.south east) + (0,-0.8)$);
+    
+    % Separatore verticale
+    \draw [thick] ($(gen_int.south east) + (1.25,-0.7)$) -- ($(gen_int.south east) + (1.25,-0.9)$);
+    
+    % Etichette
+    \node [font=\footnotesize] at ($(checker.south) + (0.5,-1.1)$) {front-end};
+    \node [font=\footnotesize] at ($(gen_cod.south) + (-0.5,-1.1)$) {back-end};
+
+\end{tikzpicture}
+\end{center}
+
+\subsection{Analisi Statica (Static Checker)}
+L'analisi statica è un insieme di controlli di consistenza effettuati al momento della compilazione per garantire che il programma possa essere compilato con successo e per individuare errori prima dell'esecuzione. Si divide in:
+
+\subsubsection{1. Controlli Sintattici}
+Verificano il rispetto delle regole strutturali del linguaggio. Esempi:
+\begin{itemize}
+    \item Un identificatore deve essere dichiarato al più una volta nello stesso scope.
+    \item Un'istruzione \texttt{break} deve trovarsi all'interno di un ciclo (\texttt{while}, \texttt{for}) o \texttt{switch}.
+    \item Distinzione tra \textbf{L-value} e \textbf{R-value}:
+    \begin{itemize}
+        \item \textbf{L-value} (Left-value): Indica una locazione di memoria (es. a sinistra di un assegnamento: \texttt{i = 5}).
+        \item \textbf{R-value} (Right-value): Indica il valore contenuto nella locazione (es. a destra di un assegnamento: \texttt{x = i + 1}).
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{2. Controlli di Tipo}
+Garantiscono che operatori e funzioni siano applicati a un numero corretto di operandi e che il loro tipo sia adeguato.
+\begin{itemize}
+    \item Esempio di conversione implicita (coercion):
+    \begin{itemize}
+        \item \texttt{x = 4 + 5} : Nessuna conversione necessaria.
+        \item \texttt{x = 4 + 5.1} : Il numero intero \texttt{4} deve essere convertito in float prima della somma.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Rappresentazioni Intermedie e DAG}
+
+La rappresentazione intermedia serve da ponte tra il front-end e il back-end. Esistono diversi livelli di astrazione:
+
+\begin{center}
+\begin{tikzpicture}[node distance=0.5cm, auto, font=\small]
+    % Nodi del flusso
+    \node (src) {Prog. Sorgente};
+    \node[right=0.8cm of src] (high) {Rapp. Alto Livello};
+    \node[right=0.8cm of high] (dots) {$\dots$};
+    \node[right=0.8cm of dots] (low) {Rapp. Basso Livello};
+    \node[right=0.8cm of low] (tgt) {Codice Target};
+
+    % Frecce flusso
+    \draw[->] (src) -- (high);
+    \draw[->] (high) -- (dots);
+    \draw[->] (dots) -- (low);
+    \draw[->] (low) -- (tgt);
+
+    % Annotazioni (Albero e 3 Indirizzi)
+    \node[below=0.8cm of high, text=magenta] (tree_label) {Albero Sintattico};
+    \draw[->, magenta, bend right] (tree_label.north) to (high.south);
+
+    \node[below=0.8cm of low, text=magenta] (addr_label) {Codice a 3 indirizzi};
+    \node[below=0.1cm of addr_label, font=\scriptsize] {$x = y \text{ op } z$};
+    \draw[->, magenta, bend right] (addr_label.north) to (low.south);
+\end{tikzpicture}
+\end{center}
+
+\begin{itemize}
+    \item \textbf{Albero Sintattico:} Rappresentazione gerarchica fedele alla grammatica.
+    \item \textbf{DAG (Grafo Aciclico Diretto):} Simile all'albero sintattico, ma identifica le sotto-espressioni comuni. I nodi con lo stesso valore/struttura vengono riutilizzati (parte condivisa).
+\end{itemize}
+
+\subsubsection*{Esempio di DAG}
+Consideriamo l'espressione: $a + a * (b - c) + (b - c) * d$.
+La sotto-espressione $(b - c)$ viene calcolata una sola volta e il nodo risultante viene puntato da entrambe le parti che lo utilizzano.
+
+\begin{center}
+\begin{tikzpicture}[
+    level distance=1.5cm,
+    sibling distance=1.5cm,
+    every node/.style={circle, inner sep=1pt},
+    edge from parent/.style={draw, thick}
+]
+
+    % Definizione manuale dei nodi per creare la condivisione
+    \node (root) at (0,0) {$+$};
+    
+    \node (plus_left) at (-2, -1.5) {$+$};
+    \node (mult_right) at (2, -1.5) {$*$};
+    
+    \node (a_first) at (-3, -3) {$a$};
+    \node (mult_left) at (-1, -3) {$*$};
+    \node (d) at (3, -3) {$d$};
+    
+    \node (a_second) at (-2, -4.5) {$a$};
+    
+    % Nodo condiviso (evidenziato in rosa come negli appunti)
+    \node (minus_shared) at (0, -4.5) {$-$};
+    \node (b) at (-0.5, -6) {$b$};
+    \node (c) at (0.5, -6) {$c$};
+
+    % Cerchio rosa attorno alla parte condivisa
+    \draw[magenta, thick] (0, -5.2) ellipse (1cm and 1.5cm);
+    \node[magenta, below=1.5cm of minus_shared] {$\uparrow$ parte condivisa};
+
+    % Collegamenti
+    \draw (root) -- (plus_left);
+    \draw (root) -- (mult_right);
+    
+    \draw (plus_left) -- (a_first);
+    \draw (plus_left) -- (mult_left);
+    
+    \draw (mult_right) -- (minus_shared); % Condivisione destra
+    \draw (mult_right) -- (d);
+    
+    \draw (mult_left) -- (a_second);
+    \draw (mult_left) -- (minus_shared); % Condivisione sinistra
+    
+    \draw (minus_shared) -- (b);
+    \draw (minus_shared) -- (c);
+
+\end{tikzpicture}
+\end{center}

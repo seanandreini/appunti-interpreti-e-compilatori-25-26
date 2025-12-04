@@ -185,12 +185,12 @@ Poiché l'automa termina nello stato $q_2$, che è uno stato finale, la stringa 
         
           \path[->]
             (S2) edge node{a} (A2)
-                 edge [loop above] node{a,b} (S2)
+                 edge [loop above] node{b} (S2)
             (A2) edge [loop above] node{a} ()
                  edge node{b} (B2)
             (B2) edge node{a} (C2)
                  edge [bend left=40] node{b} (S2)
-            (C2) edge [loop above] node{a,b} ();
+            (C2) edge [loop above] node{b} ();
         \end{tikzpicture}
         
         \vspace{1em}
@@ -320,37 +320,51 @@ Per gli NFA valgono queste particolarità:
 
 \subsection{Logica di simulazione di un NFA}
 
+L'algoritmo per simulare un NFA verifica se una stringa in ingresso viene accettata calcolando iterativamente l'insieme degli stati raggiungibili.
+
 \begin{verbatim}
-s = s_0
+S = epsilon_closure(s0)
 c = nextChar()
 while (c != eof) {
-    s = \delta(s, c)
+    S = epsilon_closure(move(S, c))
     c = nextChar()
 }
-if (s \in F) return "sì"
+if (intersezione(S, F) != vuoto) return "sì"
 else return "no"
 \end{verbatim}
 
-Per la costruzione di un NFA da espressioni regolari si utilizzano i seguenti scheletri fondamentali:
+\subsection{Costruzione di un NFA da espressioni regolari}
+Per la \textbf{costruzione di un NFA da espressioni regolari} si utilizzano i seguenti scheletri fondamentali:
 
 \begin{itemize}
   \item \textbf{Unione} ($r = s \mid t$):  
     Si crea un nuovo stato iniziale che, tramite transizioni $\varepsilon$, si collega sia al punto di ingresso dell'NFA per $s$ sia a quello per $t$. Gli stati finali dei due rami sono poi connessi tramite $\varepsilon$ a un unico nuovo stato finale comune.
     
     \begin{center}
-    \begin{tikzpicture}[node distance=1.6cm, auto]
-      \node[state, initial] (i) {i};
-      \node[state] (s1) [right=of i, yshift=0.6cm] {};
-      \node[state] (s2) [right=of s1] {};
-      \node[state, accepting, double, right=of s2, yshift=-0.6cm] (f) {f};
-      \node[state] (t1) [right=of i, yshift=-0.6cm] {};
-      \node[state] (t2) [right=of t1] {};
-      \path[->]
-        (i) edge node[above left] {$\varepsilon$} (s1)
-        (i) edge node[below left] {$\varepsilon$} (t1)
-        (s2) edge node[above right] {$\varepsilon$} (f)
-        (t2) edge node[below right] {$\varepsilon$} (f);
-    \end{tikzpicture}
+      \begin{tikzpicture}[shorten >=1pt, node distance=1.5cm, on grid, auto]
+        % Stati Start e Finale
+        \node (start) {start};
+        \node[state] (i) [right=of start] {i};
+        \node[state, accepting] (f) [right=6cm of i] {f};
+     
+        % Blocchi ovali per N(s) e N(t)
+        \draw (3, 1.5) ellipse (2.5cm and 0.8cm) node {$N(s)$};
+        \draw (3, -1.5) ellipse (2.5cm and 0.8cm) node {$N(t)$};
+     
+        % Stati interni fittizi per i collegamenti
+        \node[state, minimum size=0.6cm] (s_in) at (1.5, 1.5) {};
+        \node[state, minimum size=0.6cm] (s_out) at (4.5, 1.5) {};
+        \node[state, minimum size=0.6cm] (t_in) at (1.5, -1.5) {};
+        \node[state, minimum size=0.6cm] (t_out) at (4.5, -1.5) {};
+     
+        % Frecce
+        \path[->] (start) edge (i);
+        \path[->] 
+         (i) edge node {$\varepsilon$} (s_in)
+         (i) edge node [swap] {$\varepsilon$} (t_in)
+         (s_out) edge node {$\varepsilon$} (f)
+         (t_out) edge node [swap] {$\varepsilon$} (f);
+     \end{tikzpicture}
     \end{center}
   
   \item \textbf{Concatenazione} ($r = st$):  
@@ -373,31 +387,51 @@ Per la costruzione di un NFA da espressioni regolari si utilizzano i seguenti sc
     Si aggiungono un nuovo stato iniziale e uno finale. Dal nuovo iniziale si può andare con una $\varepsilon$ sia al nuovo finale (per accettare la stringa vuota), sia verso l'NFA di $s$. Dallo stato finale di $s$ partono due $\varepsilon$-transizioni, una che torna all'inizio di $s$ (per ripetizioni) e una che va al nuovo finale.
     
     % Schema 3: Chiusura di Kleene r = s^* (versione pulita)
-\begin{center}
-  \begin{tikzpicture}[
-      node distance=2.2cm,
-      auto,
-      every loop/.style={looseness=8},
-      >=stealth
-  ]
-    % Nodi
-    \node[state, initial] (i) {i};                      % nuovo iniziale
-    \node[state] (sL) [right=3cm of i] {};              % ingresso di s
-    \node[state] (sR) [right=2.5cm of sL] {};           % uscita di s
-    \node[state, accepting, double] (f) [right=3cm of sR, yshift=-0.2cm] {f}; % nuovo finale
+    \begin{figure}[h]
+      \centering
+      \begin{tikzpicture}[shorten >=1pt, node distance=2cm, on grid, auto]
+         
+         % --- 1. Posizionamento dei Nodi ---
+         
+         % Nodo Start (etichetta)
+         \node (start) {start};
+         
+         % Nuovo Stato Iniziale (i)
+         \node[state] (i) [right=1.5cm of start] {i};
   
-    % Collegamenti epsilon principali
-    \path[->]
-      (i) edge[bend left=8] node[above] {$\varepsilon$} (sL)   % i -> s
-          edge[bend right=18] node[below] {$\varepsilon$} (f)  % i -> f (accetta ε)
-      (sR) edge[bend left=8] node[above] {$\varepsilon$} (f)    % s -> f
-      (sR) edge[bend left=35] node[above] {$\varepsilon$} (sL); % loop: s -> s
+         % Stati interni fittizi per N(s) (distanziati maggiormente da i)
+         % s_in è l'inizio del vecchio automa, s_out è la fine
+         \node[state, minimum size=0.8cm] (s_in) [right=3cm of i] {}; 
+         \node[state, minimum size=0.8cm] (s_out) [right=4cm of s_in] {};
   
-    % opzionale: leggera cornice attorno a N(s)
-    % \node[draw, rounded corners, fit=(sL)(sR), inner sep=6pt, label=below:{\small $N(s)$}] {};
-  \end{tikzpicture}
-  \end{center}  
+         % Nuovo Stato Finale (f)
+         \node[state, accepting] (f) [right=3cm of s_out] {f};
+  
+         % --- 2. Disegno dell'Ovale N(s) ---
+         % Calcolo il centro tra s_in e s_out per disegnare l'ellisse
+         \draw ($(s_in)!0.5!(s_out)$) ellipse (3cm and 1.2cm);
+         \node at ($(s_in)!0.5!(s_out)$) {\Large $N(s)$};
+  
+         % --- 3. Frecce e Transizioni ---
+         \path[->] 
+          (start) edge (i)
+          
+          % Ingresso nel sotto-automa
+          (i) edge node {$\varepsilon$} (s_in)
+          
+          % Uscita dal sotto-automa
+          (s_out) edge node {$\varepsilon$} (f)
+          
+          % Loop indietro (Ripetizione): da fine s a inizio s
+          (s_out) edge [bend right=60] node [swap] {$\varepsilon$} (s_in)
+          
+          % Salto in avanti (Stringa vuota/Zero occorrenze): da i a f
+          (i) edge [bend right=50] node [swap] {$\varepsilon$} (f);
+  
+      \end{tikzpicture}
+  \end{figure}
 \end{itemize}
+
 
 \subsection*{Costruzione step-by-step di un NFA per \((a|b)^*abb\)}
 
@@ -549,39 +583,58 @@ Per la costruzione di un NFA da espressioni regolari si utilizzano i seguenti sc
 
 \subsection{Convertire un NFA in un DFA}
 
-\subsection*{$\varepsilon$-closure(s)}
-L'insieme degli stati del NFA raggiungibili da $s$ con solo $\varepsilon$-transizioni.
+L'idea generale alla base della \textbf{costruzione per sottoinsiemi} è che ogni stato del DFA costruito corrisponda a un \textit{insieme} di stati dell'NFA di partenza. Dopo aver letto una sequenza di input $a_1 a_2 \dots a_n$, il DFA si troverà nello stato che rappresenta l'insieme di tutti i possibili stati in cui l'NFA potrebbe trovarsi processando quella stessa sequenza.
 
+Un aspetto positivo di questo approccio è che, per i linguaggi di interesse pratico, il numero di stati del DFA risultante è approssimativamente lo stesso dell'NFA, evitando l'esplosione esponenziale degli stati che teoricamente potrebbe verificarsi.
+
+\subsubsection*{Funzioni di base}
+Per gestire correttamente le $\varepsilon$-transizioni, definiamo le seguenti operazioni sugli stati dell'NFA:
+
+\paragraph{$\varepsilon$-closure(s)}
+L'insieme degli stati del NFA raggiungibili da uno stato $s$ seguendo solo percorsi di $\varepsilon$-transizioni (incluso $s$ stesso).
 \begin{align*}
   \varepsilon\text{-cl}(6) &= \{6, 7, 1, 2, 4\} \\
   \varepsilon\text{-cl}(8) &= \{8\} \\
   \varepsilon\text{-cl}(0) &= \{0, 1, 2, 4, 7\}
 \end{align*}
 
-\subsection*{$\varepsilon$-closure(T)}
-L'insieme degli stati del NFA raggiungibili da un qualsiasi stato $s \in T$ con solo $\varepsilon$-transizioni:
+\paragraph{$\varepsilon$-closure(T)}
+Estensione della funzione precedente a un insieme di stati $T$. È l'unione delle $\varepsilon$-closure di tutti gli stati in $T$:
 \[
 \varepsilon\text{-cl}(T) = \bigcup_{s \in T} \varepsilon\text{-cl}(s)
 \]
 
-\subsection*{move(T, a)}
-L'insieme degli stati raggiungibili leggendo "a" da ogni stato di $T$.
+\paragraph{move(T, a)}
+L'insieme degli stati dell'NFA raggiungibili da un qualsiasi stato nell'insieme $T$ consumando il simbolo di input $a$.
 
+\subsubsection*{Costruzione della Tabella di Transizione (Dtran)}
+L'algoritmo costruisce gli stati del DFA ($A, B, C, \dots$) e la funzione di transizione \texttt{Dtran}. Lo stato iniziale del DFA è dato da $\varepsilon\text{-closure}(s_0)$, dove $s_0$ è lo stato iniziale dell'NFA.
+
+Calcoliamo lo stato iniziale $A$:
 \[
-\varepsilon\text{-cl}(0) = \{0, 1, 2, 4, 7\} = A
+A = \varepsilon\text{-cl}(0) = \{0, 1, 2, 4, 7\}
 \]
 
+Ora calcoliamo le transizioni per i simboli di input (es. 'a' e 'b') partendo da $A$:
 \begin{align*}
   \mathrm{Dtran}[A, a] &= \varepsilon\text{-cl}(\mathrm{move}(A, a))\\
         &= \varepsilon\text{-cl}(\{3, 8\}) = \{3, 6, 7, 1, 2, 4, 8\} = \{1, 2, 3, 4, 6, 7, 8\} = B \\
   \mathrm{Dtran}[A, b] &= \varepsilon\text{-cl}(\mathrm{move}(A, b))\\
-        &= \varepsilon\text{-cl}(\{5\}) = \{1, 2, 4, 5, 6, 7\} = C \\
+        &= \varepsilon\text{-cl}(\{5\}) = \{1, 2, 4, 5, 6, 7\} = C 
+\end{align*}
+
+Avendo scoperto i nuovi stati $B$ e $C$, procediamo a calcolare le loro transizioni:
+\begin{align*}
   \mathrm{Dtran}[B, a] &= \varepsilon\text{-cl}(\mathrm{move}(B, a))\\
         &= \varepsilon\text{-cl}(\{3, 8\}) = B
 \end{align*}
 
+L'algoritmo prosegue calcolando le transizioni per tutti gli stati scoperti finché non se ne trovano di nuovi. I passaggi rimanenti (omessi per brevità) sono:
 \vspace{0.3cm}
 \texttt{Dtran[B, b]},\quad \texttt{Dtran[C, a]},\quad \texttt{Dtran[C, b]},\quad \texttt{Dtran[D, a]},\quad \texttt{Dtran[D, b]}
+
+\subsubsection*{Risultato Finale}
+Gli stati di accettazione del DFA sono tutti quegli insiemi che contengono almeno uno stato di accettazione dell'NFA originale.
 
 \vspace{0.5cm}
 \begin{minipage}{0.45\textwidth}
@@ -596,9 +649,9 @@ L'insieme degli stati raggiungibili leggendo "a" da ogni stato di $T$.
   D & B & D \\
   E & B & C \\
   \end{tabular}
-  \end{minipage}
-  \hfill
-  \begin{minipage}{0.52\textwidth}
+\end{minipage}
+\hfill
+\begin{minipage}{0.52\textwidth}
   \textbf{Schema DFA}
   
   \begin{tikzpicture}[node distance=1.8cm, auto]
@@ -619,78 +672,97 @@ L'insieme degli stati raggiungibili leggendo "a" da ogni stato di $T$.
       (D) edge[loop above] node {b} ()
       (D) edge node {a} (B);
   \end{tikzpicture}
-  \end{minipage}
-  
-  \subsection{Minimizzazione dei DFA}
-  \vspace{0.7em}
-  Data una stringa $x$, si dice che $x$ \textbf{distingue} due stati se, partendo da questi stati e seguendo le transizioni etichettate da $x$, si arriva esattamente in uno stato di accettazione e nell'altro in uno stato non accettante.
-  
-  \vspace{0.7em}
-  Uno stato $A$ è \textbf{distinguibile} da uno stato $B$ se esiste almeno una stringa che li distingue.
-  
-  \vspace{0.7em}
-  Due stati $A$ e $B$ \textbf{non sono equivalenti} se esiste almeno una stringa che li distingue, cioè se esiste una transizione che li porta verso comportamenti diversi rispetto all'accettazione.
-  
-  \vspace{1em}
-  \textbf{Esempio}:
-  
-  \begin{center}
-  \begin{tikzpicture}[node distance=2.3cm, auto, >=stealth]
+\end{minipage}
+\subsection{Minimizzazione dei DFA}
+
+L'algoritmo di minimizzazione degli stati si basa sul partizionamento degli stati del DFA in gruppi di stati non distinguibili. Ogni gruppo viene infine fuso in un unico stato del nuovo DFA minimo.
+
+\subsubsection{Concetti Fondamentali}
+\begin{itemize}
+    \item Data una stringa $x$, si dice che $x$ \textbf{distingue} due stati se, partendo da questi stati e seguendo le transizioni etichettate da $x$, si arriva esattamente in uno stato di accettazione e nell'altro in uno stato non accettante.
+    \item Uno stato $A$ è \textbf{distinguibile} da uno stato $B$ se esiste almeno una stringa che li distingue.
+    \item Due stati $A$ e $B$ sono \textbf{equivalenti} (o non distinguibili) se nessuna stringa li distingue. In un DFA minimo, stati equivalenti vengono fusi insieme.
+\end{itemize}
+
+\subsubsection{Algoritmo}
+Si parte da una partizione iniziale $\Pi = \{F, S-F\}$ che separa stati finali da stati non finali. Si raffina la partizione iterativamente finché non è più possibile suddividere i gruppi.
+Due stati $s, t$ rimangono nello stesso gruppo se e solo se per ogni simbolo di input $a$, le transizioni $\delta(s, a)$ e $\delta(t, a)$ portano a stati che appartengono allo stesso gruppo nella partizione corrente.
+
+\subsubsection{Esempio Pratico}
+Consideriamo il seguente automa (modificato per rendere A e C equivalenti):
+
+\begin{center}
+\begin{tikzpicture}[node distance=2.5cm, auto, >=stealth]
     \node[state, initial] (A) {A};
     \node[state] (B) [right=of A] {B};
-    \node[state] (C) [above=1.4cm of B] {C};
+    \node[state] (C) [above=of B] {C};
     \node[state] (D) [right=of B] {D};
     \node[state, accepting, double] (E) [right=of D] {E};
   
     % Transizioni
     \path[->]
-      (A) edge [bend left=25] node {b} (C)
-          edge node {a} (B)
-      (B) edge [bend left=25] node {a} (A)
-          edge [bend left=8] node {a} (C)
-          edge node {b} (D)
-      (B) edge [loop below] node {a} ()
-      (C) edge node {b} (E)
-      (D) edge [bend left=18] node {b} (B)
-          edge node {b} (E)
+      (A) edge node {a} (B)
+          edge [bend left=40] node {b} (E) % A va in E con b (come C)
+      (B) edge node {b} (D)
+          edge [loop below] node {a} ()
+      (C) edge node {a} (B) % C va in B con a (come A)
+          edge node {b} (E) % C va in E con b (come A)
+      (D) edge [bend left=20] node {b} (E)
           edge [loop above] node {a} ()
       (E) edge [loop right] node {b} ();
-  \end{tikzpicture}
-  \end{center}
-  
-  % Partizioni nella minimizzazione
+\end{tikzpicture}
+\end{center}
+
+\textbf{Passi della Minimizzazione:}
 \begin{enumerate}
-  \item $\{A, B, C, D\}$ \ \ $\{E\}$
-  \item $\{A, B, C\}$ \ $\{D\}$ \ $\{E\}$
-  \item $\{A, C\}$ \ $\{B\}$ \ $\{D\}$ \ $\{E\}$
+    \item \textbf{Partizione Iniziale:} Separazione tra finali e non finali.
+    \[ \Pi_0 = \{ \{A, B, C, D\}, \{E\} \} \]
+    
+    \item \textbf{Raffinamento 1:} Analizziamo il gruppo $\{A, B, C, D\}$ con l'input 'b'.
+    \begin{itemize}
+        \item $A \xrightarrow{b} E$ (gruppo 2)
+        \item $C \xrightarrow{b} E$ (gruppo 2)
+        \item $D \xrightarrow{b} E$ (gruppo 2)
+        \item $B \xrightarrow{b} D$ (gruppo 1) $\rightarrow$ \textbf{B si comporta diversamente!}
+    \end{itemize}
+    Nuova partizione:
+    \[ \Pi_1 = \{ \{A, C, D\}, \{B\}, \{E\} \} \]
+
+    \item \textbf{Raffinamento 2:} Analizziamo il gruppo $\{A, C, D\}$ con l'input 'a'.
+    \begin{itemize}
+        \item $A \xrightarrow{a} B$ (gruppo B)
+        \item $C \xrightarrow{a} B$ (gruppo B)
+        \item $D \xrightarrow{a} D$ (gruppo A,C,D) $\rightarrow$ \textbf{D si comporta diversamente!}
+    \end{itemize}
+    Nuova partizione:
+    \[ \Pi_2 = \{ \{A, C\}, \{B\}, \{D\}, \{E\} \} \]
+    
+    \item \textbf{Verifica Finale:} A e C sono equivalenti?
+    \begin{itemize}
+        \item Con 'a' vanno entrambi in B.
+        \item Con 'b' vanno entrambi in E.
+    \end{itemize}
+    Sì, sono indistinguibili. L'algoritmo termina.
 \end{enumerate}
 
-Nel nuovo automa, lo stato iniziale sarà $\{AC\}$ perché contiene lo stato $A$ che era iniziale.  
-Lo stato finale rimane $\{E\}$.
+\textbf{Automa Minimo Finale:}
+Lo stato iniziale è $\{AC\}$ perché conteneva lo stato iniziale originale.
 
-L'automa finale sarà:
 \begin{center}
-  \begin{tikzpicture}[auto, >=stealth, node distance=3cm, every node/.style={font=\small}]
-    % Stati disposti a diamante per evitare sovrapposizioni
+  \begin{tikzpicture}[auto, >=stealth, node distance=2.5cm]
     \node[state, initial] (AC) {AC};
     \node[state] (B) [right=of AC] {B};
-    \node[state] (D) [below right=2cm and 1.6cm of AC] {D};
-    \node[state, accepting, double] (E) [below left=2cm and 2.6cm of B] {E};
+    \node[state] (D) [right=of B] {D};
+    \node[state, accepting, double] (E) [below=of D] {E};
   
-    % Archi senza sovrapposizioni
-    \draw[->] (AC) -- node[above] {a} (B);
-    \draw[->] (AC) edge[loop above] node {b} ();
-    \draw[->, bend left=18] (AC) to node[left] {b} (E);
-  
-    \draw[->] (B) -- node[right] {b} (D);
-    \draw[->] (B) edge[loop above] node {a} ();
-    \draw[->, bend left=25] (B) to node[above] {a} (AC);
-  
-    \draw[->] (D) edge[loop right] node {b} ();
-    \draw[->, bend left=20] (D) to node[right] {a} (B);
-    \draw[->, bend left=18] (D) to node[below right] {b} (E);
-  
-    \draw[->] (E) edge[loop below] node {b} ();
+    \path[->]
+        (AC) edge node {a} (B)
+             edge [bend right=20] node {b} (E)
+        (B)  edge [loop above] node {a} ()
+             edge node {b} (D)
+        (D)  edge [loop above] node {a} ()
+             edge node {b} (E)
+        (E)  edge [loop right] node {b} ();
   \end{tikzpicture}
-  \end{center}
+\end{center}
   

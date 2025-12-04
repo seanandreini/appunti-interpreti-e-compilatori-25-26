@@ -6,9 +6,9 @@ Associando attributi ai simboli grammaticali, si definiscono valori tramite rego
 
 È una grammatica context-free con l'aggiunta di attributi e regole semantiche. Gli attributi sono associati ai simboli della grammatica, le regole semantiche sono associate alle produzioni.
 
-\textbf{Osservazione:} Dato un simbolo della grammatica \(X\) e uno dei suoi attributi \(a\), si indica \(X.a\).
+\textbf{Osservazione:} Dato un simbolo della grammatica \(X\) e uno dei suoi attributi \(a\), si indica \(X.a\) (il valore di a per uno specifico nodo dell'albero di parsing con etichetta X).
 
-Una SSD che contiene solo attributi sintetizzati è detta \textbf{S-attribuita}. Ogni regola calcola un attributo associato alla variabile della parte sinistra della produzione mediante gli attributi associati ai simboli della parte destra. Una SSD senza effetti collaterali è detta \textbf{grammatica ad attributi}.
+Una SSD che contiene solo attributi sintetizzati è detta \textbf{S-attribuita}, cioè dove ogni regola calcola un attributo associato alla variabile della parte sinistra della produzione mediante gli attributi associati ai simboli della parte destra. Una SSD senza effetti collaterali (qualcosa che modifica lo stato del sistema oltre a restituire un valore, tipo stampare a video) è detta \textbf{grammatica ad attributi}.
 
 \subsection{Valutazione di una SSD ai nodi di un albero di parsing}
 
@@ -213,34 +213,39 @@ Una definizione guidata dalla sintassi è S-attribuita se e solo se ogni suo att
 
 \subsection{Grammatiche L-attribuite}
 
-Gli attributi associati ai simboli della parte destra di una regola, nel grafo delle dipendenze, possono avere archi orientati da sinistra a destra. Gli attributi ereditati possono utilizzare attributi ereditati o sintetizzati da sinistra e dalla stessa occorrenza, evitando cicli.
+Una definizione è L-attribuita se, nel grafo delle dipendenze, gli archi vanno solo da sinistra a destra. In particolare:
+\begin{itemize}
+    \item Gli attributi ereditati possono dipendere solo da attributi (ereditati o sintetizzati) dei simboli alla loro \textbf{sinistra} o da attributi ereditati del padre.
+    \item Questo vincolo è necessario per evitare cicli e permettere la valutazione in una sola passata.
+\end{itemize}
 
-\subsubsection*{}
-Non sempre le regole semantiche bastano, si inseriscono delle regole semantiche dette \textbf{effetti controllati}, che producono una traduzione corretta (stampe o interazione con la tavola dei simboli).
-\subsubsection*{}
-Permessi in modo che la traduzione per ogni ordinamento sia comunque corretta. I vincoli sono visti come archi impliciti.
+\paragraph{Effetti Controllati}
+Non sempre le pure regole semantiche bastano. Spesso si introducono \textbf{effetti controllati} (es. \texttt{print}, aggiornamento della Symbol Table).
+\begin{itemize}
+    \item Questi effetti sono permessi in modo che la traduzione risulti corretta per qualsiasi ordinamento di valutazione valido.
+    \item I vincoli di ordine imposti dagli effetti laterali vengono trattati come \textbf{archi impliciti} nel grafo delle dipendenze.
+\end{itemize}
 
 \subsection{Alberi sintattici}
-
-È utile trasformare una stringa in ingresso in un albero che ne rappresenta la struttura.
+È utile trasformare una stringa in ingresso in un albero che ne rappresenta la struttura gerarchica (albero sintattico) per facilitare le fasi successive della compilazione.
 
 \subsection{Classi di SDT implementabili durante il parsing}
-
-Due classi di SDT che consentono l'implementazione dell'SDT durante il parsing:
+Esistono due classi principali di SDT che consentono l'implementazione della traduzione direttamente durante l'analisi sintattica:
 
 \begin{enumerate}
-    \item La grammatica sottostante può essere riconosciuta da un parser LR e la SDD è S-attribuita (bottom-up)
-    \item La grammatica sottostante può essere riconosciuta da un parser LL e la SDD è L-attribuita (top-down)
+    \item La grammatica sottostante può essere riconosciuta da un parser \textbf{LR} e la SDD è \textbf{S-attribuita} (approccio \textit{bottom-up}).
+    \item La grammatica sottostante può essere riconosciuta da un parser \textbf{LL} e la SDD è \textbf{L-attribuita} (approccio \textit{top-down}).
 \end{enumerate}
 
 \subsubsection{Marcatori e proprietà}
+Per gestire azioni semantiche in posizioni arbitrarie, si possono introdurre dei marcatori (non-terminali che producono $\epsilon$).
 
-\textbf{Proprietà:} Se la grammatica arricchita con i marcatori può essere trattata da un dato metodo di parsing, allora lo SDT corrispondente può essere implementato durante il parsing.
+\textbf{Proprietà:} Se la grammatica arricchita con i marcatori può essere trattata da un dato metodo di parsing, allora lo SDT corrispondente può essere implementato durante il parsing stesso.
 
 \subsection{SDT postfissi}
-
-Per una produzione \(A \to XYZ\) con azione alla fine.
-
+Un SDT si dice \textbf{postfisso} se, in ogni produzione, le azioni semantiche sono posizionate esclusivamente \textbf{alla fine} del corpo della produzione.
+\[ A \to X Y Z \{ \text{azione} \} \]
+Questi schemi sono ideali per l'implementazione durante il parsing bottom-up.
 \subsubsection{Schema di traduzione postfisso - Calcolatrice}
 
 \textbf{Produzioni, Regole sintattiche e SDT:}
@@ -413,6 +418,8 @@ Dove \(R.i\) è l'attributo ereditato e \(R.s\) è l'attributo sintetizzato di \
 
 \subsubsection{Esempio - Eliminazione ricorsione nelle espressioni}
 
+Si considerino le seguenti produzioni relative a \(E\), prese da uno SDT per la traduzione di espressioni dalla forma infissa alla forma postfissa.
+
 \textbf{SDT con ricorsione sinistra:}
 
 \begin{center}
@@ -427,18 +434,29 @@ Dove \(R.i\) è l'attributo ereditato e \(R.s\) è l'attributo sintetizzato di \
 \end{tabular}
 \end{center}
 
+\noindent Se applichiamo la trasformazione standard al non-terminale \(E\), identifichiamo le parti $\alpha$ (la parte ricorsiva) e $\beta$ (la base) trattando l'azione semantica come un simbolo terminale:
+
+\begin{itemize}
+    \item Il \textbf{resto della produzione ricorsiva sinistra} ($\alpha$) è:
+    \[ \alpha = + T \; \{ \text{print}('+'); \} \]
+    \item Il \textbf{corpo dell'altra produzione} ($\beta$) è:
+    \[ \beta = T \]
+\end{itemize}
+
+Introducendo il nuovo non-terminale \(R\) (che rappresenta il resto), si applica la regola \(E \to \beta R\) e \(R \to \alpha R \mid \varepsilon\), ottenendo:
+
 \textbf{SDT senza ricorsione sinistra:}
 
 \begin{center}
-\begin{tabular}{|l|l|}
+\begin{tabular}{|l|}
 \hline
-\textbf{Produzioni} & \textbf{Azioni semantiche} \\
+\textbf{Produzioni risultanti} \\
 \hline
-\(E \to T R\) & \\
+\(E \to T R\) \\
 \hline
-\(R \to + T\) \(\{\text{print}('+');\}\) \(R_1\) & \\
+\(R \to + T\) \(\{\text{print}('+');\}\) \(R\) \\
 \hline
-\(R \to \varepsilon\) & \\
+\(R \to \varepsilon\) \\
 \hline
 \end{tabular}
 \end{center}
@@ -919,4 +937,298 @@ Per gestire gli attributi sullo stack ci baseremo sui seguenti principi:
     \item Gli attributi \textbf{sintetizzati} relativi al non-terminale $A$ sono memorizzati in un \textit{synthesize-record} separato e posizionato sullo stack immediatamente al di sotto del record relativo ad $A$.
 \end{itemize}
 
+
+%lezione 24 novembre
+\subsection{Implementazione SDT con un Parser LL}
+
+Nel contesto dei parser LL, possiamo gestire la traduzione guidata dalla sintassi (SDT) inserendo le azioni semantiche all'interno delle produzioni.
+
+\subsubsection{Esempio 1: Statement While}
+Di seguito vengono mostrati due modi alternativi per implementare la traduzione dello statement \texttt{while}.
+
+\subsubsection*{Generazione "al volo" (con print)}
+In questo approccio, le etichette vengono stampate immediatamente non appena vengono generate o quando il parser raggiunge il punto corretto. Non si usa un attributo \texttt{S.code}.
+
+\[
+\begin{array}{rl}
+S \to \textbf{while } ( & \{ L1 = new(); \ L2 = new(); \\
+& C.false = S.next; \ C.true = L2; \\
+& \textbf{print(``label'', L1);} \} \\
+C \ ) & \{ S_1.next = L1; \\
+& \textbf{print(``label'', L2);} \} \\
+S_1 & 
+\end{array}
+\]
+
+\subsubsection*{Costruzione Attributi Sintetizzati}
+In questo approccio, il codice non viene stampato subito, ma viene concatenato in un'unica stringa (\texttt{S.code}) alla fine della produzione. È il metodo più generale.
+
+\[
+\begin{array}{rl}
+S \to \textbf{while } ( & \{ L1 = new(); \ L2 = new(); \\
+& C.false = S.next; \ C.true = L2; \} \\
+C \ ) & \{ S_1.next = L1; \} \\
+S_1 & \{ \textbf{$S.code =$ label} \ || \ L1 \ || \ C.code \ || \ \textbf{label} \ || \ L2 \ || \ S_1.code; \}
+\end{array}
+\]
+
+\subsubsection*{Proprietà Invarianti}
+Si suppone valida un'ipotesi induttiva riguardo alla gestione dello stack:
+\begin{itemize}
+    \item Ogni Non-Terminale (NT) a cui è associato del codice, lascia tale codice memorizzato sotto forma di stringa nel \textbf{Synthesize-record} posizionato immediatamente al di sotto del NT nello stack.
+\end{itemize}
+
+\noindent\textbf{Spiegazione della gestione dello Stack:}
+
+La figura seguente illustra illustra la gestione dello stack per la traduzione dello statement \texttt{while} basata sulla produzione e sulle azioni semantiche definite. Il processo si articola nelle seguenti fasi:
+
+\begin{enumerate}
+    \item \textbf{Situazione Iniziale (Fig. a):} 
+    Sulla cima dello stack si trova il record per il non-terminale $S$ (con l'attributo ereditato $S.next$). Immediatamente sotto c'è il \textit{synthesize-record} di $S$, destinato a contenere il codice finale generato ($S.code$).
+
+    \item \textbf{Espansione e Azione Iniziale:}
+    Il simbolo $S$ viene espanso. Dopo aver consumato i token \textbf{while} e \textbf{(}, viene eseguito il codice dell'\textit{action-record}:
+    \begin{itemize}
+        \item Vengono generate le nuove etichette $L1$ e $L2$.
+        \item Le etichette vengono assegnate agli attributi ereditati necessari ($C.true$ e $C.false$).
+        \item I valori di $L1$ e $L2$ vengono copiati nel \textit{synthesize-record} di $S_1$ per essere usati alla fine.
+    \end{itemize}
+
+    \item \textbf{Elaborazione della Condizione $C$:}
+    Per ipotesi induttiva, $C$ calcola il proprio codice intermedio e lo salva nell'attributo sintetizzato $C.code$. Una volta rimosso $C$ dallo stack, il suo \textit{synthesize-record} copia questo valore nel campo $Ccode$ del record sottostante (quello di $S_1$).
+
+    \item \textbf{Elaborazione del Corpo $S_1$:}
+    Dopo aver consumato la parentesi chiusa \textbf{)}, viene elaborato $S_1$. Anche qui, per ipotesi induttiva, il codice del corpo viene generato e salvato nel campo $code$ del \textit{synthesize-record} di $S_1$.
+
+    \item \textbf{Sintesi Finale:}
+    Quando il \textit{synthesize-record} di $S_1$ arriva in cima allo stack, contiene tutti i pezzi necessari ($L1, L2, Ccode, code$). L'azione finale concatena queste parti nel giusto ordine:
+    \[ \text{label } L1 \ || \ Ccode \ || \ \text{label } L2 \ || \ code \]
+    La stringa risultante viene salvata nel \textit{synthesize-record} di $S$ (che si trova sotto), completando la traduzione.
+\end{enumerate}
+
+
+\begin{figure}[H]
+  \centering
+  \begin{tikzpicture}[
+      node distance=0.2cm,
+      % Stili per i blocchi
+      header/.style={rectangle, draw, minimum width=1.4cm, minimum height=0.6cm, align=center, font=\small},
+      body/.style={rectangle, draw, minimum width=1.4cm, align=left, font=\scriptsize, inner sep=3pt},
+      codeblock/.style={rectangle, draw, align=left, font=\scriptsize\ttfamily, inner sep=4pt},
+      pinkbox/.style={rectangle, draw=magenta, thick, align=left, font=\scriptsize\ttfamily, inner sep=3pt},
+      note/.style={font=\footnotesize\itshape, align=left, text width=2.5cm, fill=white, inner sep=1pt}, % Sfondo bianco
+      cross/.style={text=violet, font=\bfseries\Large} % Crocette più visibili
+  ]
+
+  % --- FIGURA (a) ---
+  \node (top_a) at (0, 1.5) {top};
+  \draw[->] (top_a) -- (0, 0.9);
+  
+  \node[header] (S_head) at (0, 0.5) {$S$};
+  \node[body, below=0cm of S_head] (S_body) {$next=x$};
+  
+  \node[header, right=0.3cm of S_head] (SynthS_head) {Synthesize\\$S.code$};
+  \node[body, below=0cm of SynthS_head] (SynthS_body) {$code=?$\\data};
+  \node[below=0.2cm of SynthS_body, font=\scriptsize] {actions};
+  
+
+
+  % --- FIGURA (b) ---
+  % Sposto tutto più in basso e a destra per dare spazio alle note laterali
+  \coordinate (start_b) at (-3, -3.5);
+  \node (top_b) at (-3, -2.5) {top};
+  \draw[->] (top_b) -- (start_b);
+  
+  % Blocchi dello stack (distanziati orizzontalmente)
+  \node[header, font=\bfseries] (while) at (start_b) {while};
+  \node[header, minimum width=0.6cm, right=0.3cm of while] (open) {(};
+  
+  \node[header, right=0.3cm of open] (act_head) {Action};
+  \node[body, below=0cm of act_head] (act_body) {$L1=$ \textcolor{brown}{y}\\$L2=$ \textcolor{brown}{z}};
+  
+  \node[header, right=0.3cm of act_head] (C_head) {$C$};
+  \node[body, below=0cm of C_head] (C_body) {$false=\textbf{x}$\\$true=?$ \textcolor{brown}{z}};
+  
+  \node[header, right=0.3cm of C_head] (SC_head) {Synthesize\\$C.code$};
+  \node[body, below=0cm of SC_head] (SC_body) {$code=$ \textcolor{cyan}{X}};
+  
+  \node[header, minimum width=0.6cm, right=0.3cm of SC_head] (close) {)};
+  
+  \node[header, right=0.3cm of close] (S1_head) {$S_1$};
+  \node[body, below=0cm of S1_head] (S1_body) {$next=?$ \textcolor{brown}{y}};
+
+  
+  \node[header, right=0.3cm of S1_head] (SS1_head) {Synthesize\\$S_1.code$};
+  \node[body, below=0cm of SS1_head] (SS1_body) {$code=?$ \textcolor{orange}{Y}\\$Ccode=$ \textcolor{cyan}{X}\\$l1=$ \textcolor{brown}{y}\\$l2=$ \textcolor{brown}{z}};
+  
+  \node[header, right=0.3cm of SS1_head] (Final_head) {Synthesize\\$S.code$};
+  \node[body, below=0cm of Final_head] (Final_body) {$code=?$\\data};
+  \node[below=0.2cm of Final_body, font=\scriptsize] {actions};
+
+
+
+  % --- RIQUADRI E COLLEGAMENTI (CODICE) ---
+  % Spostati più in basso per non sovrapporsi
+  
+  \node[codeblock, below=1.5cm of while, anchor=north west, xshift=-1.5cm] (code_left) {
+      $L1=new();$ \textcolor{magenta}{\checkmark}\\
+      $L2=new();$ \textcolor{magenta}{\checkmark}\\
+      $stack[top-1].true=L2;$ \textcolor{magenta}{\checkmark}\\
+      $stack[top-4].next=L1;$ \textcolor{magenta}{\checkmark}\\
+      $stack[top-5].l1=L1;$ \textcolor{magenta}{\checkmark}\\
+      $stack[top-5].l2=L2;$ \textcolor{magenta}{\checkmark}
+  };
+  \draw[->, thick, bend right=30] (act_body.south) to (code_left.north east);
+
+  \node[pinkbox, below=2cm of SC_body] (code_center) {
+      $stack[top-3].Ccode = code;$
+  };
+  \draw[dotted, thick] (SC_body.south) -- (code_center.north);
+
+  \node[pinkbox, below=2.5cm of SS1_body] (code_right) {
+      $stack[top-1].code =$ \\
+      \textbf{label} $||$ $l1$ $||$ $Ccode$ \textcolor{cyan}{X} \\
+      $||$ \textbf{label} $||$ $l2$ $||$ $code;$ \textcolor{orange}{Y}
+  };
+  \draw[dotted, thick] (SS1_body.south) -- (code_right.north);
+
+  % Freccia Arancione (da destra a sinistra sotto)
+  \draw[->, thick, orange, looseness=0.8] (Final_head.east) to [out=0, in=0] (code_right.east);
+
+  % --- ANNOTAZIONI ---
+
+  % Nota a sinistra (spostata ancora più a sinistra)
+  \node[note, left=1cm of while] (note_1) {richiede al\\parser di\\consumare\\il terminale\\e top passa\\al prossimo};
+  \draw[->, thick, violet] (note_1.east) to [bend left] (while.west);
+  
+
+  % Crocette viola (sopra i blocchi)
+  \foreach \n in {while, open, act_head, C_head, SC_head}
+      \node[cross, above=0.2cm of \n] {$\times$};
+  \node[cross, above=0.2cm of S1_head] {$\downarrow$};
+
+  % Hp Induttiva (sopra, centrale)
+  \node[note, text width=2cm, align=center] (hp) at (2, -1.5) {\textbf{Hp. Induttiva}\\usata per};
+  \draw[->, thick, cyan] (hp) to [out=180, in=90] (C_head.north);
+  \draw[->, thick, orange] (hp) to [out=0, in=90] (SS1_head.north);
+
+
+  
+  % Nota azzurra (sopra SS1)
+  \node[note, text=cyan, above=1cm of S1_head, align=center] (note_blue) {una volta concluso C\\in $code=?$ ci sara'\\$code=C$};
+  \draw[->, thick, cyan] (note_blue) to (SC_head.north);
+
+\end{tikzpicture}
+\caption{Diagramma dettagliato della gestione dello stack.}
+\end{figure}
+
+
+
+\subsection{Implementazione SDT con un Parser LR (Quarta Strategia)}
+
+Per implementare SDT che hanno azioni interne (non postfisse) utilizzando un parser Bottom-Up (LR), è necessario adattare la grammatica.
+
+La tecnica si divide in 3 passi:
+\begin{enumerate}
+    \item Si identificano le azioni interne prima di un NT per calcolare gli attributi ereditati e le azioni alla fine per calcolare gli attributi sintetizzati della testa.
+    \item Si introduce un \textbf{Non-Terminale Marcatore (M)} per sostituire ogni azione interna.
+    \item Se $M$ sostituisce un'azione $\alpha$ in una produzione A $\to$ $\alpha a \beta$, si associa a $M \to \epsilon$ l'azione a'.
+\end{enumerate}
+
+L'azione associata a $M$:
+\begin{itemize}
+    \item Copia come attributo ereditato di $M$ tutti gli attributi di A dei simbolo in $\alpha$ di cui l'azione a necessita.
+    \item Calcola gli attributi nello stesso modo di a, ma li rende attributi sintetizzati di $M$.
+\end{itemize}
+
+\textbf{Proprietà fondamentale:} L'aggiunta di marcatori (che producono $\epsilon$) in qualsiasi posizione del corpo delle produzioni di una grammatica LL produce come risultato una nuova grammatica che appartiene alla classe LR.
+
+\subsubsection*{Esempio di trasformazione}
+Data la produzione con azione interna:
+\[ A \to \{ B.i = f(A.i); \} B C \]
+Si introduce il marcatore $M$:
+\[ A \to M B C \]
+\[ M \to \epsilon \quad \{ M.i = A.i; \ M.s = f(M.i); \} \]
+Dove $M.s$ è l'attributo sintetizzato che porta fuori il valore calcolato.
+
+\subsubsection*{Esempio Pratico: While con Parser LR}
+Applicando i marcatori alla produzione del \texttt{while}:
+
+\[ S \to \textbf{while } ( \ M \ C \ ) \ N \ S_1 \]
+
+Dove $M$ e $N$ sono marcatori introdotti per gestire le azioni intermedie:
+\begin{itemize}
+    \item \textbf{M}: Si occupa di generare le etichette $L1, L2$ e settare $C.true, C.false$.
+    \item \textbf{N}: Si occupa di settare $S_1.next$.
+\end{itemize}
+
+\subsubsection*{Gestione dello Stack LR}
+Durante la riduzione, gli attributi si trovano in posizioni specifiche dello stack (ipotesi induttiva):
+\begin{enumerate}
+    \item $S.next$ si trova al di sotto del corpo della produzione (sotto il token \texttt{while}).
+    \item $C.true$ e $C.false$ si trovano nel record di $M$, immediatamente sotto il record per $C$.
+    \item $S1.next$ si troverà nel record di N, immediatamente sotto il record di S1.
+    \item $C.code$ si trova nel record di $C$.
+    \item $S.code$ si troverà nel record di $S$ alla fine della riduzione.
+\end{enumerate}
+
+Di seguito viene riportato il codice eseguito dal parser LR nelle tre fasi cruciali della traduzione: la preparazione delle etichette (marcatore $M$), il passaggio del flusso di controllo al corpo (marcatore $N$) e la sintesi finale del codice ($S$).
+
+\subsection*{1. Codice eseguito durante la riduzione di $\epsilon \to M$}
+
+Prima di analizzare la condizione $C$, il parser riduce la produzione vuota al marcatore $M$. In questo momento lo stack contiene \texttt{while}, \texttt{(} e il marcatore $M$ in cima.
+Viene eseguito il seguente codice per preparare le etichette e propagare gli attributi:
+
+\begin{verbatim}
+L1 = new();                  // Genera etichetta per inizio controllo condizione
+L2 = new();                  // Genera etichetta per inizio corpo del ciclo
+C.true = L2;                 // Se C è vero, salta a L2
+C.false = stack[top-3].next; // Se C è falso, salta a S.next (recuperato dallo stack)
+\end{verbatim}
+
+\textbf{Nota sull'offset:}
+Il valore \texttt{stack[top-3].next} si riferisce all'attributo ereditato $S.next$.
+Analisi della pila in questo momento ($M$ è la cima):
+\begin{itemize}
+    \item \texttt{top}: $M$
+    \item \texttt{top-1}: \texttt{(}
+    \item \texttt{top-2}: \texttt{while}
+    \item \texttt{top-3}: record contenente $S.next$
+\end{itemize}
+
+\vspace{0.5cm}
+
+\subsection*{2. Codice per il Marcatore $N$ (Calcolo di $S_1.next$)}
+
+Quando il parser ha finito di analizzare $C$ e la parentesi chiusa, riduce $\epsilon$ a $N$. Il record di $N$ si trova ora sulla cima dello stack ($top$).
+L'unico dato associato a $N$ è l'attributo ereditato $S_1.next$, che deve essere recuperato dal record di $M$ (dove è stato salvato $L1$).
+
+Dato che lo stack contiene $M \ C \ ) \ N$, il record di $M$ si trova 3 posizioni sotto $N$.
+
+\begin{verbatim}
+// N è in cima (top). Recupera L1 da M (top-3)
+S1.next = stack[top - 3].L1;
+\end{verbatim}
+
+\vspace{0.5cm}
+
+\subsection*{3. Codice eseguito durante la riduzione finale di $S$}
+
+A questo punto il parser ha riconosciuto l'intero corpo $S_1$ e riduce tutto ciò che si trova tra \texttt{while} e $S_1$ a $S$.
+\[ S \to \textbf{while } ( \ M \ C \ ) \ N \ S_1 \]
+
+Il codice recupera i frammenti generati dai marcatori e dai sotto-nodi (che si trovano ancora nello stack agli offset corretti rispetto a $S_1$ che è in cima), concatena le parti e aggiorna lo stack.
+
+\begin{verbatim}
+// Costruzione del codice intermedio (tempCode)
+// M è a top-4, C è a top-3, S1 è a top
+tempCode = label || stack[top - 4].L1 || stack[top - 3].code ||
+           label || stack[top - 4].L2 || stack[top].code;
+
+// Aggiornamento dello Stack
+top = top - 6; //per arrivare al while
+
+// Il codice viene salvato nel record di S (che ora è in cima)
+stack[top].code = tempCode;
+\end{verbatim}
 

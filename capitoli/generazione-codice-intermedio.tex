@@ -832,73 +832,110 @@ C &\to [\mathbf{num}] \ C_1 \quad \{ C.type = array(\mathbf{num}.value, C_1.type
 \noindent \textbf{Esempio: \texttt{int[2][3]}}
 \\ Le linee tratteggiate mostrano l'albero di parsing. Le linee continue e le frecce mostrano la propagazione degli attributi: $t, w$ scendono (ereditati) verso destra, mentre $type, width$ risalgono (sintetizzati) verso sinistra.
 \begin{center}
-    \begin{tikzpicture}[scale=1, transform shape]
-        % --- COORDINATE CALCOLATE PER PARALLELISMO PERFETTO ---
-        \coordinate (T) at (0, 0);
-        \coordinate (B) at (-4, -2);
-        \coordinate (C1) at (2, -2);
-        \coordinate (C2) at (5, -5);
-        \coordinate (C3) at (8, -8);
-        \coordinate (Eps) at (8, -9.2);
+    \begin{tikzpicture}[scale=0.9, transform shape]
+        % --- NODI PRINCIPALI ---
+        \node (T) at (0, 0) {$T$};
+        \node (B) at (-5, -2) {$B$};
+        
+        % La catena dei C scende in diagonale
+        \node (C1) at (1, -2) {$C$};
+        \node (C2) at (4, -5) {$C$};
+        \node (C3) at (7, -8) {$C$};
+        \node (Eps) at (7, -9.5) {$\boldsymbol{\epsilon}$};
     
-        % --- RAMI DELL'ALBERO (Tratteggiati) ---
+        % --- TERMINALI (collegati con linee tratteggiate) ---
+        % int sotto B
+        \node[below=1.2cm of B] (int) {\textbf{int}};
+        
+        % [2] tra C1 e C2 (visivamente a sinistra di C2)
+        \node (idx1) at (2.5, -3.5) {$[ 2 ]$};
+        
+        % [3] tra C2 e C3 (visivamente a sinistra di C3)
+        \node (idx2) at (5.5, -6.5) {$[ 3 ]$};
+    
+        % --- COLLEGAMENTI ALBERO (Tratteggiati) ---
         \draw[dotted, thick] (T) -- (B);
-        \draw[dotted, thick] (B) -- +(-0.5, -0.8) node[below] {\textbf{int}};
-        
         \draw[dotted, thick] (T) -- (C1);
-        \draw[dotted, thick] (C1) -- +(-1, -1) node[below] {$[2]$};
-        \draw[dotted, thick] (C1) -- (C2);
-        \draw[dotted, thick] (C2) -- +(-1, -1) node[below] {$[3]$};
-        \draw[dotted, thick] (C2) -- (C3);
-        \draw[dotted, thick] (C3) -- (Eps) node[below] {$\boldsymbol{\epsilon}$};
-    
-        % --- NODI ---
-        \node[fill=white, inner sep=1pt] at (T) {$T$};
-        \node[fill=white, inner sep=1pt] at (B) {$B$}; 
-        \node[fill=white, inner sep=1pt] at (C1) {$C$}; 
-        \node[fill=white, inner sep=1pt] at (C2) {$C$}; 
-        \node[fill=white, inner sep=1pt] at (C3) {$C$};
-    
-        % --- TESTI DEGLI ATTRIBUTI ---
         
-        % 1. Testo B
-        \node[align=left, font=\scriptsize] (TxtB) at (-5, -1.5) 
+        \draw[dotted, thick] (B) -- (int);
+        
+        \draw[dotted, thick] (C1) -- (idx1); % Ramo verso [2]
+        \draw[dotted, thick] (C1) -- (C2);   % Ramo verso C successivo
+        
+        \draw[dotted, thick] (C2) -- (idx2); % Ramo verso [3]
+        \draw[dotted, thick] (C2) -- (C3);   % Ramo verso C successivo
+        
+        \draw[dotted, thick] (C3) -- (Eps);  % Ramo verso epsilon
+    
+        % --- ATTRIBUTI E FRECCE ---
+    
+        % 1. Attributi di B
+        \node[below right=0.1cm of B, align=left, font=\scriptsize, xshift=-1cm] (AttrB) 
             {$type=integer$ \\ $width=4$};
     
-        % 2. Testo T
-        \node[align=left, font=\scriptsize] (TxtT) at (2.5, 0.5) 
-            {$type=array(2, array(3, integer))$ \\ $width=24$};
+        % 2. Freccia Ereditata (Curva da B a C1)
+        \draw[->, >=latex, thick] (AttrB.east) to[out=20, in=160] 
+            node[midway, above, font=\scriptsize, align=center] {$t=integer$ \\ $w=4$} 
+            (C1.north west);
     
-        % 3. Testo C1
-        \node[align=left, font=\scriptsize] (TxtC1) at (4.5, -1.5) 
-            {$type=array(2, array(3, integer))$ \\ $width=24$};
+        % 3. Attributi C3 (Base)
+        \node[right=0.2cm of C3, align=left, font=\scriptsize] (AttrC3) 
+            {$type=integer$ \\ $width=4$};
     
-        % 4. Testo C2
-        \node[align=left, font=\scriptsize] (TxtC2) at (7.5, -4.5) 
+        % 4. Attributi C2
+        \node[right=0.2cm of C2, align=left, font=\scriptsize] (AttrC2) 
             {$type=array(3, integer)$ \\ $width=12$};
     
-        % 5. Testo C3
-        \node[align=left, font=\scriptsize] (TxtC3) at (10.5, -7.5) 
-            {$type=integer$ \\ $width=4$};
+        % 5. Attributi C1
+        \node[right=0.2cm of C1, align=left, font=\scriptsize] (AttrC1) 
+            {$type=array(2, array(3, integer))$ \\ $width=24$};
     
-        % --- FRECCE ---
+        % 6. Attributi T (Radice)
+        \node[right=0.5cm of T, align=left, font=\scriptsize] (AttrT) 
+            {$type=array(2, array(3, integer))$ \\ $width=24$};
     
-        % 1. FRECCIA EREDITATA (Discendente)
-        % CORREZIONE: aggiunto 'align=center' qui sotto per risolvere l'errore
-        \draw[->, >=latex, thick] (-3, -1.5) to[out=20, in=150] 
-            node[midway, above, font=\scriptsize, align=center] {$t=integer$ \\ $w=4$} 
-            (1.5, -1.8);
+        % --- Frecce Sintetizzate (Risalita) ---
+        \draw[->, >=latex, thick] (AttrC3.north) -- (AttrC2.south);
+        \draw[->, >=latex, thick] (AttrC2.north) -- (AttrC1.south);
+        \draw[->, >=latex, thick] (AttrC1.north) -- (AttrT.south west);
     
-        % 2. FRECCE SINTETIZZATE (Ascendenti - Parallele)
+    \end{tikzpicture}
+    \end{center}
+    
+    \subsection{Sequenze di Dichiarazioni}
+    
+    Prima che la prima delle dichiarazioni sia analizzata, il valore della variabile \textit{offset} viene inizializzato a 0. Ogni volta che viene individuato un nuovo nome, esso viene inserito nella tabella dei simboli con l'offset corrente, incrementato poi della larghezza del tipo.
+    
+    \begin{align*}
+    P &\to \quad \{ offset = 0; \} \\
+      &\quad \ \ D \\[1em]
+    D &\to T \ \mathbf{id} ; \quad \{ top.put(\mathbf{id}.lexeme, T.type, offset); \\
+      &\quad \quad \quad \quad \quad \quad offset = offset + T.width; \} \\
+      &\quad \ \ D_1 \\[1em]
+    D &\to \epsilon
+    \end{align*}
+    
+    \vspace{0.5cm}
+    \noindent \textbf{Esempio di calcolo offset:}
+    
+    \begin{center}
+    \begin{tikzpicture}[scale=1]
+        % Testo del codice
+        \node[anchor=west, font=\large] (L1) at (0, 3) {\texttt{int x;}};
+        \node[anchor=west, font=\large] (L2) at (0, 1.5) {\texttt{float y;}};
+        \node[anchor=west, font=\large] (L3) at (0, 0) {\texttt{int z;}};
+    
+        % Frecce e valori offset
+        % Riga 1
+        \draw[->, gray, thick] (2, 3) -- (3, 3) node[right, black] {\textbf{0}};
         
-        % Da C3 a C2
-        \draw[->, >=latex, thick] (TxtC3.north west) -- (TxtC2.south east);
-        
-        % Da C2 a C1
-        \draw[->, >=latex, thick] (TxtC2.north west) -- (TxtC1.south east);
-        
-        % Da C1 a T
-        \draw[->, >=latex, thick] (TxtC1.north west) -- (TxtT.south east);
+        % Freccia da riga 1 a riga 2 (somma width)
+        \draw[->, gray, thick, rounded corners] (3.5, 2.8) -- (3.5, 2.2) -- (3, 1.5) node[right, black] {\textbf{4}}; 
+        \node[text=gray, font=\footnotesize] at (4.2, 2.2) {(width 4)};
+    
+        % Freccia da riga 2 a riga 3
+        \draw[->, gray, thick, rounded corners] (3.5, 1.3) -- (3.5, 0.7) -- (3, 0) node[right, black] {\textbf{12}};
+        \node[text=gray, font=\footnotesize] at (4.2, 0.7) {(width 8)};
     
     \end{tikzpicture}
     \end{center}
@@ -1042,7 +1079,7 @@ L'assegnamento $a = b + -c$ viene tradotto visualizzando l'albero sintattico ann
     ]
 \end{forest}
 \end{center}
-
+\vspace{2 cm}
 La sequenza di codice a tre indirizzi generata è:
 \begin{lstlisting}
 t1 = minus c
@@ -1188,7 +1225,7 @@ Un array bidimensionale può essere memorizzato per righe (come in C e Java) o p
 Nell'organizzazione per \textbf{righe}, l'indice più a destra cambia più rapidamente. In quella per \textbf{colonne}, cambia più rapidamente l'indice a sinistra.
 
 \subsubsection{Traduzione dei Riferimenti agli Array}
-Il problema principale nella generazione del codice per i riferimenti agli elementi di un array consiste nel correlare i calcoli dell'indirizzo visti nel paragrafo 7.10.2 alla grammatica corrispondente.
+Il problema principale nella generazione del codice per i riferimenti agli elementi di un array è correlare i calcoli dell'indirizzo del paragrafo precedente alla grammatica corrispondente.
 La grammatica per i riferimenti agli array usa il non-terminale $L$ per gestire sequenze di indici:
 $$ L \rightarrow L[E] \mid \textbf{id}[E] $$
 Assumiamo che l'indice del primo elemento sia 0 e usiamo il calcolo basato sulle larghezze (Eq. 4).
@@ -1204,7 +1241,7 @@ Il non-terminale $L$ ha tre attributi sintetizzati:
 \subsubsection*{Schema di Traduzione (SDT)}
 Lo schema di traduzione genera codice a tre indirizzi per espressioni con array:
 
-\begin{table}[h]
+\begin{table}[H]
     \centering
     \renewcommand{\arraystretch}{1.5}
     \begin{tabular}{|l|p{10cm}|}
@@ -1239,7 +1276,7 @@ Lo schema di traduzione genera codice a tre indirizzi per espressioni con array:
     \caption{Azioni semantiche per la traduzione dei riferimenti ad array.}
 \end{table}
 
-\subsubsection{Esempio 6.12: Albero Annotato}
+\subsubsection{Esempio: Albero Annotato}
 Sia $a$ un array di interi di dimensione $2 \times 3$ e siano $c, i, j$ variabili intere.
 \begin{itemize}
     \item Il tipo di $a$ è $array(2, array(3, integer))$, larghezza $2 \times 3 \times 4 = 24$.
@@ -1259,7 +1296,7 @@ t4 = a[t3]
 t5 = c + t4
 \end{lstlisting}
 
-\textbf{Figura 6.23 - Albero di parsing annotato:}
+\textbf{Albero di parsing annotato:}
 
 \begin{center}
     \begin{forest}

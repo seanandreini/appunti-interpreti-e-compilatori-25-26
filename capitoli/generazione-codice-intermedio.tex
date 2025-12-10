@@ -1331,3 +1331,204 @@ t5 = c + t4
     \end{center}
 
     
+
+%lezione 10 dicembre
+\subsection{Controllo dei Tipi}
+
+Il controllo dei tipi (Type Checking) consiste nel verificare che il programma rispetti le regole del sistema di tipi del linguaggio (Type System). Il compilatore deve:
+\begin{enumerate}
+    \item Assegnare un'espressione di tipo a ogni componente del programma.
+    \item Procedere a verificare che tali espressioni siano conformi a un insieme di regole logiche.
+\end{enumerate}
+
+Un linguaggio è \textbf{fortemente tipizzato} se il compilatore garantisce che i programmi accettati verranno eseguiti senza errori di tipo.
+
+\subsubsection{Regole per il Controllo dei Tipi}
+
+Il controllo può assumere due forme: \textit{sintesi} e \textit{inferenza}.
+
+\subsubsection*{Sintesi dei Tipi}
+Prevede la costruzione del tipo di un'espressione a partire dal tipo delle sue sottoespressioni. I nomi devono essere dichiarati prima dell'uso.
+Una tipica regola di sintesi è :
+$$
+\textbf{if } f \text{ è di tipo } s \to t \textbf{ and } x \text{ è di tipo } s, 
+$$
+$$
+\textbf{ then } f(x) \text{ è di tipo } t
+$$
+Questa regola può essere applicata anche a operatori come la somma ($E_1 + E_2$), interpretandoli come funzioni $add(E_1, E_2)$.
+
+\subsubsection*{Inferenza dei Tipi}
+Determina il tipo di un costrutto del linguaggio in base al modo in cui viene utilizzato.
+Esempio: se abbiamo una funzione $null(x)$ che verifica se una lista è vuota, dall'espressione $null(x)$ inferiamo che $x$ deve essere una lista, anche se non conosciamo il tipo degli elementi.
+
+Useremo le lettere greche ($\alpha, \beta$) per indicare tipi ignoti. La regola tipica è la seguente:
+$$
+    \textbf{if } f(x) \text{ è un'espressione, }
+$$
+$$
+    \textbf{then} \text{ per qualche } \alpha \text{ e } \beta \text{, f è di tipo } \alpha \to \beta \textbf{ and } x \text{ è di tipo } \alpha
+$$
+
+\textbf{Esempio: Statement If}
+Possiamo interpretare il costrutto \texttt{if(E) S;} come l'applicazione di una funzione che richiede un booleano e uno statement (tipo \textit{void}) e restituisce \textit{void}:
+$$ if: boolean \times void \to void $$
+
+\subsubsection{Conversioni di Tipo}
+
+Consideriamo un'espressione aritmetica del tipo $x + i$, in cui $x$ è di tipo \texttt{float} e $i$ è di tipo \texttt{integer}.
+Poiché la loro rappresentazione interna è diversa nei calcolatori, e le operazioni su di essi richiedono istruzioni macchina differenti, il compilatore deve gestire la situazione in modo che entrambi gli operandi abbiano lo stesso tipo al momento dell'esecuzione della somma.
+
+Supponiamo che i valori interi debbano essere convertiti in valori floating-point quando necessario, mediante l'operatore unario \texttt{(float)}.
+Ad esempio, nel codice dell'espressione $2 * 3.14$, il valore intero 2 viene convertito in virgola mobile:
+\begin{lstlisting}[language=C]
+t1 = (float) 2
+t2 = t1 * 3.14
+\end{lstlisting}
+
+\paragraph{Tipologie di Conversione}
+Le conversioni possono essere classificate in base a chi le effettua:
+\begin{itemize}
+    \item \textbf{Implicita (Coercizione):} La conversione avviene automaticamente a cura del compilatore. Si limitano solitamente a promozioni che garantiscono la consistenza dell'informazione.
+    \item \textbf{Esplicita (Cast):} Il programmatore scrive istruzioni apposite per forzare la conversione.
+\end{itemize}
+
+\subsubsection*{Regole di Conversione in Java}
+
+Le regole variano da linguaggio a linguaggio. In Java si distinguono due casi principali:
+
+\begin{enumerate}
+    \item \textbf{Conversioni con ampliamento (Widening):} Anche dette \textit{promozioni}. Hanno lo scopo di preservare l'informazione intatta trasformando un tipo in uno più grande (gerarchicamente superiore).
+    \item \textbf{Conversioni con restrizione (Narrowing):} Anche dette \textit{demozioni}. Possono portare a una perdita di informazione (es. troncamento dei decimali).
+\end{enumerate}
+
+Le regole sono descritte dai grafici seguenti. Una conversione da un tipo $s$ a un tipo $t$ è lecita se e solo se esiste un arco da $s$ a $t$.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1cm, auto, >=latex]
+        % Stile dei nodi
+        \tikzstyle{type} = [draw=none, fill=none]
+        
+        % --- GRAFO (a) Promozioni (Widening) ---
+        \node[type] (double) {double};
+        \node[type, below=0.6cm of double] (float) {float};
+        \node[type, below=0.6cm of float] (long) {long};
+        \node[type, below=0.6cm of long] (int) {int};
+        \node[type, below left=0.8cm of int] (short) {short};
+        \node[type, below left=0.6cm of short] (byte) {byte};
+        \node[type, below right=0.8cm of int] (char) {char};
+        
+        \draw[->] (float) -- (double);
+        \draw[->] (long) -- (float);
+        \draw[->] (int) -- (long);
+        \draw[->] (short) -- (int);
+        \draw[->] (byte) -- (short);
+        \draw[->] (char) -- (int);
+        
+        \node[below=6cm of double] {(a) Promozioni};
+
+        % --- GRAFO (b) Demozioni (Narrowing) ---
+        \node[type, right=4cm of double] (double2) {double};
+        \node[type, below=0.6cm of double2] (float2) {float};
+        \node[type, below=0.6cm of float2] (long2) {long};
+        \node[type, below=0.6cm of long2] (int2) {int};
+        
+        \node[type, below=0.6cm of int2] (short2) {short};
+        \node[type, left=0.8cm of short2] (char2) {char}; 
+        \node[type, right=0.8cm of short2] (byte2) {byte}; 
+
+        \draw[->] (double2) -- (float2);
+        \draw[->] (float2) -- (long2);
+        \draw[->] (long2) -- (int2);
+        \draw[->] (int2) -- (short2);
+        \draw[->] (short2) -- (byte2);
+        \draw[->] (int2) -- (byte2);
+        
+        % Conversioni incrociate specifiche (Narrowing)
+        \draw[->] (int2) -- (char2);
+        
+        % Relazione reciproca char <-> short
+        \draw[<->] (char2) -- (short2); 
+        
+        % Relazione reciproca char <-> byte
+        \draw[<->] (char2) to[bend right=45] (byte2); 
+
+        \node[below=1.4cm of short2] {(b) Demozioni};
+        
+    \end{tikzpicture}
+    \caption{Gerarchia delle conversioni tra tipi primitivi in Java. Si noti che \texttt{char}, \texttt{short} e \texttt{byte} sono convertibili l'uno nell'altro nelle demozioni.}
+\end{figure}
+
+\subsubsection*{Generazione del Codice Semantico}
+
+L'azione semantica per il controllo di tipo della produzione $E \to E_1 + E_2$ utilizza due funzioni ausiliarie fondamentali:
+
+\begin{enumerate}
+    \item $\textbf{max}(t_1, t_2)$: Prende come argomenti due tipi $t_1$ e $t_2$ e restituisce il maggiore dei due secondo la gerarchia di promozione (widening).
+    \item $\textbf{widen}(a, t, w)$: Genera la conversione di tipo necessaria per promuovere un indirizzo $a$ di tipo $t$ in un valore di tipo $w$.
+\end{enumerate}
+
+\textbf{Funzionamento di \texttt{widen}:}
+Se $t$ e $w$ rappresentano lo stesso tipo, la funzione restituisce $a$ stesso. Altrimenti, genera un'istruzione che esegue la conversione, salva il risultato in una variabile temporanea \texttt{temp} e restituisce \texttt{temp}.
+
+Ecco lo pseudocodice, assumendo che gli unici tipi disponibili siano \texttt{integer} e \texttt{float}:
+
+\begin{lstlisting}
+Addr widen(Addr a, Type t, Type w) {
+    if (t == w) return a;
+    else if (t == integer and w == float) {
+        temp = new Temp();
+        gen(temp '=' '(float)' a);
+        return temp;
+    }
+    else error;
+}
+\end{lstlisting}
+
+\paragraph{Schema di Traduzione (SDT)}
+L'uso di queste funzioni permette di generalizzare lo schema di traduzione, evitando una lunga serie di controlli condizionali annidati (es. "se $E_1$ è int ed $E_2$ è float...").
+
+Il nuovo schema per la somma diventa:
+
+\begin{lstlisting}
+E -> E1 + E2  {
+    // 1. Determina il tipo risultato (il "massimo" tra i due)
+    E.type = max(E1.type, E2.type);
+    
+    // 2. Converte (se necessario) entrambi gli operandi al tipo risultato
+    a1 = widen(E1.addr, E1.type, E.type);
+    a2 = widen(E2.addr, E2.type, E.type);
+    
+    // 3. Genera il codice per la somma usando gli indirizzi (eventualmente) convertiti
+    E.addr = new Temp();
+    gen(E.addr '=' a1 '+' a2);
+}
+\end{lstlisting}
+
+\subsubsection{Sovraccarico delle Funzioni (Overloading)}
+
+Il sovraccarico (o overloading) si verifica quando uno stesso simbolo ha significati diversi. Il problema principale consiste nel \textbf{disambiguare} quale versione del simbolo utilizzare, basandosi sul contesto.
+
+La scelta dell'interpretazione corretta avviene osservando:
+\begin{itemize}
+    \item Gli \textbf{argomenti} forniti in una chiamata di funzione.
+    \item Le \textbf{operazioni} applicate al risultato (o a una variabile).
+\end{itemize}
+
+\paragraph{Assunzione}
+Per semplificare il problema, assumiamo che il sovraccaricamento sia risolvibile analizzando \textbf{esclusivamente} i tipi degli argomenti di una funzione.
+
+Una possibile regola per la sintesi del tipo di funzioni sovraccaricate è la seguente:
+
+\begin{gather*}
+    \textbf{if } f \text{ può essere di tipo } s_i \to t_i, \text{ per } 1 \le i \le n, \text{ con } s_i \neq s_j \text{ per } i \neq j \\
+    \textbf{and } x \text{ è di tipo } s_k, \text{ per qualche valore di } k \text{ tale che } 1 \le k \le n \\
+    \textbf{then } \text{l'espressione } f(x) \text{ è di tipo } t_k
+\end{gather*}
+
+\paragraph{Risoluzione efficiente (tramite metodo del valore numerico)}
+Per risolvere efficientemente il problema del sovraccaricamento, si può assegnare un indice intero (valore numerico) a ogni nodo di un DAG che rappresenta l'espressione.
+La \textbf{firma} di una funzione consiste nel nome della funzione e nel tipo dei suoi argomenti. L'ipotesi di poter risolvere il sovraccaricamento sulla base dei soli argomenti equivale a dire che possiamo risolverlo in base alla firma.
+
+\textit{Nota:} Non sempre l'analisi dei soli argomenti è sufficiente. 

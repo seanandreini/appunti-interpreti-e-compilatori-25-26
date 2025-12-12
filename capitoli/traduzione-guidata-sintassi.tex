@@ -155,53 +155,87 @@ Un attributo ereditato relativo ad un nodo \(N\) è definito unicamente in base 
 \textbf{Grafo delle dipendenze:}
 
 \begin{center}
-\begin{tikzpicture}[
-  node distance=1.5cm and 2cm,
-  every node/.style={font=\footnotesize},
-  arrow/.style={->, thick, >=stealth, dashed}
-]
+\begin{tikzpicture}[scale=1.1, transform shape]
+    % --- NODI DELL'ALBERO SINTATTICO (Posizionamento) ---
+    \node (T) at (0, 0) {$T$};
+    
+    % Figli di T
+    \node (F1) at (-4, -2) {$F$};
+    \node (Tp1) at (2, -2) {$T'$};
+    
+    % Figli di F1
+    \node (digit1) at (-4, -4) {\textbf{digit}};
+    
+    % Figli di T' (primo livello)
+    \node (mul) at (-0.5, -4) {$*$};
+    \node (F2) at (2, -4) {$F$};
+    \node (Tp2) at (5, -4) {$T'$};
+    
+    % Figli di F2
+    \node (digit2) at (2, -6) {\textbf{digit}};
+    
+    % Figli di T' (secondo livello)
+    \node (eps) at (5, -6) {$\epsilon$};
 
-% Nodi disposti secondo l'immagine
-\node (T9val) at (2,5) {\(T\) 9 \(val\)};
-\node (F3val) at (-2,3.5) {\(F\) 3 \(val\)};
-\node (inh5) at (2,3.5) {\(inh\) 5 \(T'\)};
-\node (syn8) at (5,3.5) {8 \(syn\) \(T'\)};
-\node (digit1) at (-2,2) {digit 1 \(lexval\)};
-\node (star) at (0,2) {*};
-\node (F4val) at (2,1.5) {\(F\) 4 \(val\)};
-\node (inh6) at (4.5,1.5) {\(inh\) 6 \(T'\)};
-\node (syn7) at (6.5,1.5) {7 \(syn\) \(T'\)};
-\node (digit2) at (2,0) {digit 2 \(lexval\)};
-\node (epsilon) at (4.5,0) {\(\varepsilon\)};
+    % --- LINEE DELL'ALBERO (Tratteggiate) ---
+    \draw[dotted, thick] (T) -- (F1);
+    \draw[dotted, thick] (T) -- (Tp1);
+    \draw[dotted, thick] (F1) -- (digit1);
+    \draw[dotted, thick] (Tp1) -- (mul);
+    \draw[dotted, thick] (Tp1) -- (F2);
+    \draw[dotted, thick] (Tp1) -- (Tp2);
+    \draw[dotted, thick] (F2) -- (digit2);
+    \draw[dotted, thick] (Tp2) -- (eps);
 
-% Frecce come nell'immagine
-% digit 1 -> F 3 val
-\draw[arrow] (digit1) -- (F3val);
+    % --- ATTRIBUTI SEMANTICI (Nodi con numeri) ---
+    
+    % Attributi T
+    \node[right=0.1cm of T, font=\small] (val9) {9 \textit{val}};
+    
+    % Attributi F1 e digit1
+    \node[right=0.1cm of F1, font=\small] (val3) {3 \textit{val}};
+    \node[right=0.1cm of digit1, font=\small] (lex1) {1 \textit{lexval}};
+    
+    % Attributi T' (Livello 1)
+    \node[left=0.05cm of Tp1, font=\small] (inh5) {\textit{inh} 5};
+    \node[right=0.05cm of Tp1, font=\small] (syn8) {8 \textit{syn}};
+    
+    % Attributi F2 e digit2
+    \node[right=0.1cm of F2, font=\small] (val4) {4 \textit{val}};
+    \node[right=0.1cm of digit2, font=\small] (lex2) {2 \textit{lexval}};
+    
+    % Attributi T' (Livello 2)
+    \node[left=0.05cm of Tp2, font=\small] (inh6) {\textit{inh} 6};
+    \node[right=0.05cm of Tp2, font=\small] (syn7) {7 \textit{syn}};
 
-% F 3 val -> inh 5 T'
-\draw[arrow] (F3val) to[out=0, in=180] (inh5);
-
-% digit 2 -> F 4 val
-\draw[arrow] (digit2) -- (F4val);
-
-% F 4 val -> inh 6 T'
-\draw[arrow] (F4val) -- (inh6);
-
-% inh 5 T' -> inh 6 T' (curva)
-\draw[arrow] (inh5) to[out=-20, in=150] (inh6);
-
-% inh 6 T' -> syn 7 T' (arco sopra)
-\draw[arrow] (inh6) to[out=60, in=120] (syn7);
-
-% syn 7 T' -> syn 8 T'
-\draw[arrow] (syn7) to[out=150, in=0] (syn8);
-
-% syn 8 T' -> T 9 val (curva a destra)
-\draw[arrow] (syn8) to[out=90, in=0] (T9val);
+    % --- FRECCE DELLE DIPENDENZE ---
+    
+    % 1 lexval -> 3 val (Verticale)
+    \draw[->, >=latex] (lex1) -- (val3);
+    
+    % 3 val -> inh 5 (Curva sopra)
+    \draw[->, >=latex] (val3) to[out=25, in=165] (inh5);
+    
+    % 2 lexval -> 4 val (Verticale)
+    \draw[->, >=latex] (lex2) -- (val4);
+    
+    % 4 val -> inh 6 (Curva sopra)
+    \draw[->, >=latex] (val4) to[out=25, in=165] (inh6);
+    
+    % inh 5 -> inh 6 (Diagonale)
+    \draw[->, >=latex] (inh5) -- (inh6);
+    
+    % inh 6 -> syn 7 (Curva sotto a cappio)
+    \draw[->, >=latex] (inh6) to[out=-80, in=-100, looseness=2] (syn7);
+    
+    % syn 7 -> syn 8 (Diagonale risalita)
+    \draw[->, >=latex] (syn7) -- (syn8);
+    
+    % syn 8 -> 9 val (Diagonale risalita)
+    \draw[->, >=latex] (syn8) -- (val9);
 
 \end{tikzpicture}
 \end{center}
-
 
 \subsection{Ordinamento topologico}
 

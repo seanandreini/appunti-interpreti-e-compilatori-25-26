@@ -1331,3 +1331,548 @@ t5 = c + t4
     \end{center}
 
     
+
+%lezione 10 dicembre
+\subsection{Controllo dei Tipi}
+
+Il controllo dei tipi (Type Checking) consiste nel verificare che il programma rispetti le regole del sistema di tipi del linguaggio (Type System). Il compilatore deve:
+\begin{enumerate}
+    \item Assegnare un'espressione di tipo a ogni componente del programma.
+    \item Procedere a verificare che tali espressioni siano conformi a un insieme di regole logiche.
+\end{enumerate}
+
+Un linguaggio è \textbf{fortemente tipizzato} se il compilatore garantisce che i programmi accettati verranno eseguiti senza errori di tipo.
+
+\subsubsection{Regole per il Controllo dei Tipi}
+
+Il controllo può assumere due forme: \textit{sintesi} e \textit{inferenza}.
+
+\subsubsection*{Sintesi dei Tipi}
+Prevede la costruzione del tipo di un'espressione a partire dal tipo delle sue sottoespressioni. I nomi devono essere dichiarati prima dell'uso.
+Una tipica regola di sintesi è :
+$$
+\textbf{if } f \text{ è di tipo } s \to t \textbf{ and } x \text{ è di tipo } s, 
+$$
+$$
+\textbf{ then } f(x) \text{ è di tipo } t
+$$
+Questa regola può essere applicata anche a operatori come la somma ($E_1 + E_2$), interpretandoli come funzioni $add(E_1, E_2)$.
+
+\subsubsection*{Inferenza dei Tipi}
+Determina il tipo di un costrutto del linguaggio in base al modo in cui viene utilizzato.
+Esempio: se abbiamo una funzione $null(x)$ che verifica se una lista è vuota, dall'espressione $null(x)$ inferiamo che $x$ deve essere una lista, anche se non conosciamo il tipo degli elementi.
+
+Useremo le lettere greche ($\alpha, \beta$) per indicare tipi ignoti. La regola tipica è la seguente:
+$$
+    \textbf{if } f(x) \text{ è un'espressione, }
+$$
+$$
+    \textbf{then} \text{ per qualche } \alpha \text{ e } \beta \text{, f è di tipo } \alpha \to \beta \textbf{ and } x \text{ è di tipo } \alpha
+$$
+
+\textbf{Esempio: Statement If}
+Possiamo interpretare il costrutto \texttt{if(E) S;} come l'applicazione di una funzione che richiede un booleano e uno statement (tipo \textit{void}) e restituisce \textit{void}:
+$$ if: boolean \times void \to void $$
+
+\subsubsection{Conversioni di Tipo}
+
+Consideriamo un'espressione aritmetica del tipo $x + i$, in cui $x$ è di tipo \texttt{float} e $i$ è di tipo \texttt{integer}.
+Poiché la loro rappresentazione interna è diversa nei calcolatori, e le operazioni su di essi richiedono istruzioni macchina differenti, il compilatore deve gestire la situazione in modo che entrambi gli operandi abbiano lo stesso tipo al momento dell'esecuzione della somma.
+
+Supponiamo che i valori interi debbano essere convertiti in valori floating-point quando necessario, mediante l'operatore unario \texttt{(float)}.
+Ad esempio, nel codice dell'espressione $2 * 3.14$, il valore intero 2 viene convertito in virgola mobile:
+\begin{lstlisting}[language=C]
+t1 = (float) 2
+t2 = t1 * 3.14
+\end{lstlisting}
+
+\paragraph{Tipologie di Conversione}
+Le conversioni possono essere classificate in base a chi le effettua:
+\begin{itemize}
+    \item \textbf{Implicita (Coercizione):} La conversione avviene automaticamente a cura del compilatore. Si limitano solitamente a promozioni che garantiscono la consistenza dell'informazione.
+    \item \textbf{Esplicita (Cast):} Il programmatore scrive istruzioni apposite per forzare la conversione.
+\end{itemize}
+
+\subsubsection*{Regole di Conversione in Java}
+
+Le regole variano da linguaggio a linguaggio. In Java si distinguono due casi principali:
+
+\begin{enumerate}
+    \item \textbf{Conversioni con ampliamento (Widening):} Anche dette \textit{promozioni}. Hanno lo scopo di preservare l'informazione intatta trasformando un tipo in uno più grande (gerarchicamente superiore).
+    \item \textbf{Conversioni con restrizione (Narrowing):} Anche dette \textit{demozioni}. Possono portare a una perdita di informazione (es. troncamento dei decimali).
+\end{enumerate}
+
+Le regole sono descritte dai grafici seguenti. Una conversione da un tipo $s$ a un tipo $t$ è lecita se e solo se esiste un arco da $s$ a $t$.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[node distance=1cm, auto, >=latex]
+        % Stile dei nodi
+        \tikzstyle{type} = [draw=none, fill=none]
+        
+        % --- GRAFO (a) Promozioni (Widening) ---
+        \node[type] (double) {double};
+        \node[type, below=0.6cm of double] (float) {float};
+        \node[type, below=0.6cm of float] (long) {long};
+        \node[type, below=0.6cm of long] (int) {int};
+        \node[type, below left=0.8cm of int] (short) {short};
+        \node[type, below left=0.6cm of short] (byte) {byte};
+        \node[type, below right=0.8cm of int] (char) {char};
+        
+        \draw[->] (float) -- (double);
+        \draw[->] (long) -- (float);
+        \draw[->] (int) -- (long);
+        \draw[->] (short) -- (int);
+        \draw[->] (byte) -- (short);
+        \draw[->] (char) -- (int);
+        
+        \node[below=6cm of double] {(a) Promozioni};
+
+        % --- GRAFO (b) Demozioni (Narrowing) ---
+        \node[type, right=4cm of double] (double2) {double};
+        \node[type, below=0.6cm of double2] (float2) {float};
+        \node[type, below=0.6cm of float2] (long2) {long};
+        \node[type, below=0.6cm of long2] (int2) {int};
+        
+        \node[type, below=0.6cm of int2] (short2) {short};
+        \node[type, left=0.8cm of short2] (char2) {char}; 
+        \node[type, right=0.8cm of short2] (byte2) {byte}; 
+
+        \draw[->] (double2) -- (float2);
+        \draw[->] (float2) -- (long2);
+        \draw[->] (long2) -- (int2);
+        \draw[->] (int2) -- (short2);
+        \draw[->] (short2) -- (byte2);
+        \draw[->] (int2) -- (byte2);
+        
+        % Conversioni incrociate specifiche (Narrowing)
+        \draw[->] (int2) -- (char2);
+        
+        % Relazione reciproca char <-> short
+        \draw[<->] (char2) -- (short2); 
+        
+        % Relazione reciproca char <-> byte
+        \draw[<->] (char2) to[bend right=45] (byte2); 
+
+        \node[below=1.4cm of short2] {(b) Demozioni};
+        
+    \end{tikzpicture}
+    \caption{Gerarchia delle conversioni tra tipi primitivi in Java. Si noti che \texttt{char}, \texttt{short} e \texttt{byte} sono convertibili l'uno nell'altro nelle demozioni.}
+\end{figure}
+
+\subsubsection*{Generazione del Codice Semantico}
+
+L'azione semantica per il controllo di tipo della produzione $E \to E_1 + E_2$ utilizza due funzioni ausiliarie fondamentali:
+
+\begin{enumerate}
+    \item $\textbf{max}(t_1, t_2)$: Prende come argomenti due tipi $t_1$ e $t_2$ e restituisce il maggiore dei due secondo la gerarchia di promozione (widening).
+    \item $\textbf{widen}(a, t, w)$: Genera la conversione di tipo necessaria per promuovere un indirizzo $a$ di tipo $t$ in un valore di tipo $w$.
+\end{enumerate}
+
+\textbf{Funzionamento di \texttt{widen}:}
+Se $t$ e $w$ rappresentano lo stesso tipo, la funzione restituisce $a$ stesso. Altrimenti, genera un'istruzione che esegue la conversione, salva il risultato in una variabile temporanea \texttt{temp} e restituisce \texttt{temp}.
+
+Ecco lo pseudocodice, assumendo che gli unici tipi disponibili siano \texttt{integer} e \texttt{float}:
+
+\begin{lstlisting}
+Addr widen(Addr a, Type t, Type w) {
+    if (t == w) return a;
+    else if (t == integer and w == float) {
+        temp = new Temp();
+        gen(temp '=' '(float)' a);
+        return temp;
+    }
+    else error;
+}
+\end{lstlisting}
+
+\paragraph{Schema di Traduzione (SDT)}
+L'uso di queste funzioni permette di generalizzare lo schema di traduzione, evitando una lunga serie di controlli condizionali annidati (es. "se $E_1$ è int ed $E_2$ è float...").
+
+Il nuovo schema per la somma diventa:
+
+\begin{lstlisting}
+E -> E1 + E2  {
+    // 1. Determina il tipo risultato (il "massimo" tra i due)
+    E.type = max(E1.type, E2.type);
+    
+    // 2. Converte (se necessario) entrambi gli operandi al tipo risultato
+    a1 = widen(E1.addr, E1.type, E.type);
+    a2 = widen(E2.addr, E2.type, E.type);
+    
+    // 3. Genera il codice per la somma usando gli indirizzi (eventualmente) convertiti
+    E.addr = new Temp();
+    gen(E.addr '=' a1 '+' a2);
+}
+\end{lstlisting}
+
+\subsubsection{Sovraccarico delle Funzioni (Overloading)}
+
+Il sovraccarico (o overloading) si verifica quando uno stesso simbolo ha significati diversi. Il problema principale consiste nel \textbf{disambiguare} quale versione del simbolo utilizzare, basandosi sul contesto.
+
+La scelta dell'interpretazione corretta avviene osservando:
+\begin{itemize}
+    \item Gli \textbf{argomenti} forniti in una chiamata di funzione.
+    \item Le \textbf{operazioni} applicate al risultato (o a una variabile).
+\end{itemize}
+
+\paragraph{Assunzione}
+Per semplificare il problema, assumiamo che il sovraccaricamento sia risolvibile analizzando \textbf{esclusivamente} i tipi degli argomenti di una funzione.
+
+Una possibile regola per la sintesi del tipo di funzioni sovraccaricate è la seguente:
+
+\begin{gather*}
+    \textbf{if } f \text{ può essere di tipo } s_i \to t_i, \text{ per } 1 \le i \le n, \text{ con } s_i \neq s_j \text{ per } i \neq j \\
+    \textbf{and } x \text{ è di tipo } s_k, \text{ per qualche valore di } k \text{ tale che } 1 \le k \le n \\
+    \textbf{then } \text{l'espressione } f(x) \text{ è di tipo } t_k
+\end{gather*}
+
+\paragraph{Risoluzione efficiente (tramite metodo del valore numerico)}
+Per risolvere efficientemente il problema del sovraccaricamento, si può assegnare un indice intero (valore numerico) a ogni nodo di un DAG che rappresenta l'espressione.
+La \textbf{firma} di una funzione consiste nel nome della funzione e nel tipo dei suoi argomenti. L'ipotesi di poter risolvere il sovraccaricamento sulla base dei soli argomenti equivale a dire che possiamo risolverlo in base alla firma.
+
+\textit{Nota:} Non sempre l'analisi dei soli argomenti è sufficiente. 
+
+
+
+
+
+%lezione 11 dicembre
+\subsubsection{Inferenza del Tipo}
+
+L'inferenza del tipo determina il tipo di un costrutto del linguaggio in base al modo in cui esso è utilizzato. L'inferenza di tipo assicura che i nomi siano usati in modo consistente.
+
+Il termine \textbf{polimorfico} indica in generale un qualsiasi frammento di codice che possa essere eseguito con argomenti di diversi tipi. In questo paragrafo considereremo il \textbf{polimorfismo parametrico}, caratterizzato da parametri o variabili di tipo.
+
+Una tipica regola per l'inferenza di tipo ha la forma seguente:
+\begin{quote}
+    \textbf{if} $f(x)$ è un'espressione,\\
+    \textbf{then} per qualche $\alpha$ e $\beta$, $f$ è di tipo $\alpha \to \beta$ \textbf{and} $x$ è di tipo $\alpha$.
+\end{quote}
+\subsubsection*{Sostituzioni, Istanze e Unificazione}
+
+Se $t$ è un'espressione di tipo e $S$ una sostituzione (cioè un mapping tra variabili di tipo ed espressioni di tipo), la scrittura $S(t)$ indica il risultato che si ottiene sostituendo tutte le occorrenze di ogni variabile di tipo $\alpha$ con $S(\alpha)$.
+
+Chiamiamo $S(t)$ una \textbf{istanza} di $t$.
+Per esempio, $list(integer)$ è un'istanza di $list(\alpha)$, poiché è il risultato della sostituzione di $\alpha$ con $integer$, così come $integer \to integer$, mentre $integer \to float$ non è un'istanza di $\alpha \to \alpha$ poiché una sostituzione prevede che ogni occorrenza di una data variabile di tipo sia rimpiazzata dalla stessa espressione di tipi.
+
+Diciamo che la sostituzione $S$ è un \textbf{unificatore} delle espressioni di tipo $t_1$ e $t_2$ se risulta $S(t_1) = S(t_2)$ (ce ne può essere più di uno).
+Diciamo inoltre che $S$ è l'\textit{unificatore più generale} di $t_1$ e $t_2$ se per qualsiasi altro unificatore $S'$ di $t_1$ e $t_2$, $S'$ impone vincoli più stringenti di quanto non faccia $S$.
+
+\subsubsection*{Algoritmo di Inferenza di Tipo per Funzioni Polimorfiche}
+
+\textbf{Input:} Un programma consistente in una sequenza di definizioni di funzione seguita da un'espressione da valutare.
+
+\noindent \textbf{Output:} Tipi inferiti dei nomi che appaiono nel programma.
+
+\noindent \textbf{Metodo:}
+Per semplicità tratteremo solamente le funzioni unarie. Il tipo di una funzione binaria $f(x_1, x_2)$ può essere descritto dall'espressione di tipo $s_1 \text{ x } s_2 \to t$ in cui $s_1$ e $s_2$ sono i tipi di $x_1$ e $x_2$ rispettivamente e t è il tipo del risultato $f(x_1, x_2)$. Una
+espressione come $f(a, b)$ può essere controllata confrontando $a$ con $s_1$ e $b$ con $s_2$.
+L'idea di base consiste nello scorrere le definizioni di funzione e l'espressione nel programma d'ingresso e nell'utilizzare il tipo già inferito di una funzione ogniqualvolta questa appare in un'espressione successiva.
+
+\begin{itemize}
+    \item Per una definizione di funzione della forma $\textbf{fun } id_1(id_2) = E$, si creano due nuove variabili di tipo $\alpha$ e $\beta$. Si associa alla funzione $id_1$ il tipo $\alpha \to \beta$ e al parametro $id_2$ il tipo $\alpha$. Quindi si inferisce un'espressione di tipo per $E$. Supponiamo che, dopo l'inferenza, $\alpha$ denoti il tipo $s$ e $\beta$ il tipo t. Ne risulta che il tipo inferito per la funzione $id_1$ è $s \to t$. Ciò fatto, si legano mediante il quantificatore $\forall$ tutte le variabili rimaste non vincolate.
+    \item Per l'applicazione di una funzione $E_1(E_2)$, si inferiscono i tipi di $E_1$ ed $E_2$. Dato che $E_1$ è usato come funzione, il suo tipo deve essere della forma $s \to s'$. Si cerca di unificare il tipo di $E_1$ con $\beta \to \gamma$ (dove $\beta$ è il tipo di $E_2$). Sia $t$ il tipo inferito di $E_2$. Si cerca di unificare $s$ e $t$: se il tentativo fallisce si ha un errore di tipo, altrimenti il tipo inferito di $E_1(E_2)$ è $s'$. (Es: $S \to \alpha \to \alpha$ e $S \to integer$, allora $\alpha \to integer$).
+    \item Per ogni occorrenza di una funzione polimorfica, si sostituisce ogni variabile legata dal quantificatore $\forall$ con una nuova variabile e si rimuove il quantificatore.
+    \item Per un nome che si incontra per la prima volta, si introduce una nuova variabile di tipo.
+\end{itemize}
+
+\subsubsection*{Esempio: Inferenza su Funzione Polimorfica}
+
+Consideriamo il programma in linguaggio ML che definisce la funzione $length()$.
+\textbf{fun} introduce la definizione di una funzione; $null()$ verifica se una lista è vuota, mentre la funzione predefinita $tl()$ (\textit{tail}) restituisce ciò che rimane di una lista dopo aver rimosso il primo elemento.
+
+$$ \textbf{fun } length(x) = \textbf{if } null(x) \textbf{ then } 0 \textbf{ else } length(tl(x)) + 1 $$
+
+\subsubsection*{Analisi dell'Albero Sintattico}
+
+\begin{figure}[h]
+    \centering
+    \begin{forest}
+        for tree={
+            font=\small,
+            s sep=0.8cm,
+            l sep=0.8cm,
+        }
+        [\textbf{fun}
+            [length]
+            [x]
+            [\textbf{if}
+                [apply
+                    [null]
+                    [x]
+                ]
+                [0]
+                [+
+                    [apply
+                        [length]
+                        [apply
+                            [tl]
+                            [x]
+                        ]
+                    ]
+                    [1]
+                ]
+            ]
+        ]
+    \end{forest}
+    \caption{Albero sintattico astratto della definizione di funzione.}
+\end{figure}
+
+\subsubsection*{Tabella di Inferenza}
+
+L'algoritmo di inferenza del tipo percorre l'albero. La tabella seguente mostra i passi logici e le unificazioni effettuate.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.3}
+    \begin{tabular}{r l l}
+    \hline
+    \textbf{Linea} & \textbf{Espressione : Tipo} & \textbf{Unificazione} \\
+    \hline
+    1) & $length : \beta \to \gamma$ & \\
+    2) & $x : \beta$ & \\
+    3) & $\textbf{if} : boolean \times \alpha_i \times \alpha_i \to \alpha_i$ & \\
+    4) & $null : list(\alpha_n) \to boolean$ & \\
+    5) & $null(x) : boolean$ & $list(\alpha_n) = \beta$ \\
+    6) & $0 : integer$ & $\alpha_i = integer$ \\
+    7) & $+ : integer \times integer \to integer$ & \\
+    8) & $tl : list(\alpha_t) \to list(\alpha_t)$ & \\
+    9) & $tl(x) : list(\alpha_t)$ & $list(\alpha_t) = list(\alpha_n)$ \\
+    10) & $length(tl(x)) : \gamma$ & $\gamma = integer$ \\
+    11) & $1 : integer$ & \\
+    12) & $length(tl(x)) + 1 : integer$ & \\
+    13) & $\textbf{if}(\dots) : integer$ & \\
+    \hline
+    \end{tabular}
+  
+\end{table}
+
+Dal passo 5 e dal passo 9 deduciamo che $\beta = list(\alpha_n)$. Dal passo 10 deduciamo che il tipo di ritorno $\gamma$ è \textit{integer}.
+Quindi il tipo inferito per $length$ è:
+$$ list(\alpha_n) \to integer $$
+Generalizzando con il quantificatore universale:
+$$ \forall \alpha.\ list(\alpha) \to integer $$
+
+\vspace{0.5 cm}
+\subsubsection{Algoritmo di Unificazione}
+
+L'unificazione è il problema di determinare se due espressioni $s$ e $t$ possono essere rese identiche sostituendo alle variabili presenti in $s$ e $t$ delle nuove espressioni.
+
+Implementeremo una formulazione dell'unificazione basata sulla teoria dei grafi, secondo cui ogni tipo è rappresentato da un grafo. Le variabili di tipo sono rappresentate dalle foglie, mentre i costruttori di tipo dai nodi interni. I nodi sono raggruppati in \textbf{classi di equivalenza}: se due nodi appartengono alla stessa classe, allora le espressioni di tipo che essi rappresentano devono essere unificabili. Ne consegue che tutti i nodi interni appartenenti a una stessa classe di equivalenza devono corrispondere allo stesso costruttore di tipo e i rispettivi figli devono essere equivalenti.
+
+\vspace{0.5 cm}
+\bigskip
+\noindent \textbf{Algoritmo 6.19} Unificazione di una coppia di nodi in un grafo di tipo.
+
+\vspace{0.5 cm}
+\noindent \textbf{INPUT} Un grafo che rappresenta un tipo e una coppia di nodi $m$ e $n$ da unificare.
+
+\vspace{0.5 cm}
+\noindent \textbf{OUTPUT} Il valore booleano \textit{true} se le espressioni di tipo rappresentate dai nodi $m$ e $n$ sono unificabili, altrimenti il valore booleano \textit{false}.
+
+\vspace{0.5 cm}
+\noindent \textbf{METODO} Un nodo è rappresentato mediante un record dotato di un campo per un operatore binario e due campi per i puntatori ai figli sinistro e destro. Gli insiemi di nodi equivalenti vengono gestiti mediante il campo \textit{set}.
+Uno dei nodi di ogni classe di equivalenza viene scelto come \textit{rappresentativo} della classe e ciò è indicato dal fatto che il puntatore \textit{set} assume valore nullo. Per tutti gli altri nodi il campo \textit{set} punta (eventualmente in modo indiretto) al nodo rappresentativo della classe.
+Inizialmente ogni nodo $n$ costituisce una classe di equivalenza a sé stante ed è il nodo rappresentativo della classe.
+
+\vspace{0.5 cm}
+L'algoritmo utilizza due operazioni sui nodi descritte di seguito:
+\begin{itemize}
+    \item $find(n)$ restituisce il nodo rappresentativo della classe di equivalenza contenente il nodo $n$.
+    \item $union(m, n)$ fonde le classi di equivalenza contenenti i nodi $m$ e $n$. Se uno dei nodi rappresentativi delle classi di equivalenza di $m$ e $n$ non è associato a una variabile, tale nodo diventa il rappresentante; in caso contrario (entrambi variabili o entrambi non variabili), sceglie uno dei due nodi rappresentativi di $m$ e $n$ come rappresentativo.
+\end{itemize}
+
+
+\pagebreak
+L'algoritmo di unificazione seguente opera sui nodi del grafo:
+
+\begin{algorithm}[H]
+\caption{Algoritmo di unificazione.}
+\begin{algorithmic}[1]
+\Function{unify}{Node $m$, Node $n$}
+    \State $s = find(m); \ t = find(n);$
+    \If{$(s = t)$} \Return \textbf{true};
+    \ElsIf{(i nodi $s$ e $t$ rappresentano lo stesso tipo di base)} \Return \textbf{true};
+    % Correzione qui: condizione unica gestita correttamente
+    \ElsIf{($s$ è un nodo-operatore con figli $s_1$ e $s_2$ \textbf{and} $t$ è un nodo-operatore con figli $t_1$ e $t_2$ )}
+        \State $union(s, t);$
+        \Return $unify(s_1, t_1) \textbf{ and } unify(s_2, t_2);$
+    \ElsIf{($s$ o $t$ rappresentano una variabile)}
+        \State $union(s, t);$
+        \Return \textbf{true};
+    \Else \Return \textbf{false};
+    \EndIf
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection*{Esempio 6.20: Unificazione Grafica}
+
+Consideriamo l'unificazione delle seguenti espressioni:
+\begin{enumerate}
+    \item $((\alpha_1 \to \alpha_2) \times list(\alpha_3)) \to list(\alpha_2)$
+    \item $((\alpha_3 \to \alpha_4) \times list(\alpha_3)) \to \alpha_5$
+\end{enumerate}
+
+
+
+Applicando l'algoritmo, i nodi vengono fusi nelle seguenti classi di equivalenza :
+\begin{center}
+    \begin{tikzpicture}[
+        scale=0.9, transform shape,
+        % Aumentiamo le distanze per evitare sovrapposizioni
+        node distance=1.2cm and 1.2cm,
+        every node/.style={font=\small}
+    ]
+        % --- ALBERO SINISTRO ---
+        \node (n1) {$\to : 1$};
+        
+        % Livello 2
+        \node (n2) [below left=1.0cm and 0.6cm of n1] {$\times : 2$};
+        \node (n8) [below right=1.0cm and 0.2cm of n1] {$list : 8$};
+        
+        % Livello 3
+        \node (n3) [below left=1.0cm and 0.4cm of n2] {$\to : 3$};
+        \node (n6) [below right=1.0cm and 0.4cm of n2] {$list : 6$};
+        
+        % Livello 4
+        \node (n4) [below left=1.0cm and 0.2cm of n3] {$\alpha_1 : 4$};
+        \node (n5) [below right=1.0cm and 0.2cm of n3] {$\alpha_2 : 5$};
+        
+        % --- ALBERO DESTRO ---
+        % Posizionato ben distante a destra
+        \node (n9) [right=6cm of n1] {$\to : 1$};
+        
+        % Livello 2
+        \node (n10) [below left=1.0cm and 0.6cm of n9] {$\times : 2$};
+        \node (n14) [below right=1.0cm and 0.2cm of n9] {$\alpha_5 : 8$};
+        
+        % Livello 3
+        \node (n11) [below left=1.0cm and 0.4cm of n10] {$\to : 3$};
+        \node (n13) [below right=1.0cm and 0.4cm of n10] {$list : 6$};
+        
+        % Livello 4
+        \node (n7) [below left=1.0cm and 0.2cm of n11] {$\alpha_3 : 4$};
+        \node (n12) [below right=1.0cm and 0.2cm of n11] {$\alpha_4 : 5$};
+        
+        % --- COLLEGAMENTI (Disegnati dopo i nodi) ---
+        
+        % Albero Sinistro
+        \draw (n1) -- (n2);
+        \draw (n1) -- (n8);
+        \draw (n2) -- (n3);
+        \draw (n2) -- (n6);
+        \draw (n3) -- (n4);
+        \draw (n3) -- (n5);
+        \draw (n8) -- (n5); % list:8 punta a alpha2:5
+        
+        % Albero Destro
+        \draw (n9) -- (n10);
+        \draw (n9) -- (n14);
+        \draw (n10) -- (n11);
+        \draw (n10) -- (n13);
+        \draw (n11) -- (n7);
+        \draw (n11) -- (n12);
+        \draw (n13) -- (n7); % list:6 (dx) punta a alpha3:4
+        
+        % Collegamento TRA i due alberi (visibile nell'immagine come connessione logica)
+        \draw (n6) -- (n7); % list:6 (sx) punta a alpha3:4 (dx)
+    
+        \node at (3, -5.5) {\textbf{Figura 6.31:} Classi di equivalenza dopo l'unificazione.};
+    \end{tikzpicture}
+    \end{center}
+
+Il risultato dell'unificazione implica le equivalenze: $\alpha_1 = \alpha_3$, $\alpha_2 = \alpha_4$, $\alpha_5 = list(\alpha_2)$.
+
+\subsection{Flusso di Controllo}
+
+Le espressioni booleane, nei linguaggi di programmazione, sono usate principalmente per due scopi:
+\begin{enumerate}
+    \item \textbf{Modificare il flusso di controllo:} Usate come condizioni negli statement \texttt{if}, \texttt{while}  (\textbf{if}(E)S).
+    \item \textbf{Calcolare valori logici:} Un'espressione booleana può rappresentare \texttt{true} o \texttt{false} e può essere valutata in modo analogo alle espressioni aritmetiche mediante istruzioni a tre indirizzi relative a operatori logici. (Es: b = expr b).
+\end{enumerate}
+
+\subsubsection{Espressioni booleane}
+Le espressioni booleane sono composte da operatori booleani AND, OR e NOT applicati a operandi che possono essere variabili booleane o espressioni relazionali.
+Le espressioni relazionali hanno la forma $E_1 \textbf{ rel } E_2$ in cui $E_1$ ed $E_2$ sono espressioni aritmetiche.
+
+In questo paragrafo considereremo espressioni booleane generate dalla seguente grammatica:
+\[
+B \to B \parallel B \mid B \&\& B \mid !B \mid (B) \mid E \text{ rel } E \mid \textbf{true} \mid \textbf{false}
+\]
+
+Data l'espressione $B_1 \parallel B_2$, se determiniamo che $B_1$ è vera, possiamo immediatamente concludere che anche l'intera espressione sia vera. Allo stesso modo, per l'espressione $B_1 \&\& B_2$, l'intera espressione è falsa se è falsa $B_1$.
+
+La definizione della semantica di un linguaggio chiarisce se sia o meno richiesta la valutazione di tutte le parti di un'espressione booleana. Se la semantica stabilisce che è ammesso (o richiesto) che alcune parti di un'espressione booleana non siano valutate, il compilatore può \textbf{ottimizzarne la valutazione} calcolando solamente la porzione minima necessaria a stabilire se l'espressione complessiva sia vera o falsa.
+
+\subsubsection{Traduzione con Corto Circuito}
+
+Secondo lo schema di traduzione con \textbf{corto circuito} (short-circuit) gli operatori $\&\&$, $\parallel$ e $!$ sono tradotti mediante istruzioni di salto. In questo caso gli operatori non appaiono esplicitamente nel codice, in quanto il valore di un'espressione booleana è rappresentato implicitamente dalle diverse posizioni nel codice.
+
+\textbf{Esempio 6.21} L'istruzione:
+$$ \texttt{if } ( x < 100 \parallel x > 200 \&\& x != y ) \ x = 0; $$
+potrebbe essere tradotta nel codice:
+
+\begin{lstlisting}
+    if x < 100 goto L2
+    ifFalse x > 200 goto L1
+    ifFalse x != y goto L1
+L2: x = 0
+L1:
+\end{lstlisting}
+
+\subsubsection{Istruzioni per la Gestione del Flusso di Controllo}
+
+Consideriamo ora la traduzione delle espressioni booleane in codice a tre indirizzi nel contesto di istruzioni di controllo come quelle generate dalla seguente grammatica:
+\begin{align*}
+S &\to \textbf{if } (B) \ S_1 \\
+S &\to \textbf{if } (B) \ S_1 \ \textbf{else } S_2 \\
+S &\to \textbf{while } (B) \ S_1
+\end{align*}
+
+In queste produzioni il non-terminale $B$ rappresenta un'espressione booleana e il non-terminale $S$ rappresenta un generico statement.
+
+La traduzione del costrutto $\textbf{if }(B) S_1$ consiste del codice $B.code$ seguito dal codice $S_1.code$, come illustrato dalla figura seguente. Nel codice $B.code$ vi sono istruzioni di salto che dipendono dal valore dell'espressione $B$. In particolare, se $B$ è vera, il controllo passa alla prima istruzione di $S_1.code$, mentre se $B$ è falsa il controllo passa alla prima istruzione successiva al codice $S_1.code$.
+
+\begin{figure}[H]
+    \centering
+    \begin{tikzpicture}[
+        node distance=0cm,
+        block/.style={draw, rectangle, minimum width=3.5cm, minimum height=1cm, outer sep=0pt},
+        label/.style={font=\footnotesize, anchor=east}
+    ]
+        % --- (a) IF-THEN ---
+        \node (title_a) at (0, 1.5) {\textbf{(a) if-then}};
+        \node[block] (B_code) at (0, 0) {$B.code$};
+        \node[block, below=0cm of B_code] (S1_code) {$S_1.code$};
+        \draw[->] (B_code.east) -- +(1, 0.2) node[right] {\scriptsize verso $B.true$};
+        \draw[->] (B_code.east) -- +(1, -0.2) node[right] {\scriptsize verso $B.false$};
+        \node[label] at (B_code.south west) {$B.true:$};
+        \node[label] at (S1_code.south west) {$B.false:$};
+        
+        % --- (b) IF-THEN-ELSE ---
+        \node (title_b) at (6, 1.5) {\textbf{(b) if-then-else}};
+        \node[block] (B_code_b) at (6, 0) {$B.code$};
+        \node[block, below=0cm of B_code_b] (S1_code_b) {$S_1.code$};
+        \node[block, below=0cm of S1_code_b] (goto) {goto $S.next$};
+        \node[block, below=0cm of goto] (S2_code) {$S_2.code$};
+        \draw[->] (B_code_b.east) -- +(1, 0.2) node[right] {\scriptsize verso $B.true$};
+        \draw[->] (B_code_b.east) -- +(1, -0.2) node[right] {\scriptsize verso $B.false$};
+        \node[label] at (B_code_b.south west) {$B.true:$};
+        \node[label] at (goto.south west) {$B.false:$};
+        \node[label] at (S2_code.south west) {$S.next:$};
+
+        % --- (c) WHILE ---
+        \node (title_c) at (0, -4.5) {\textbf{(c) while}};
+        \node[block] (B_code_c) at (0, -6) {$B.code$};
+        \node[block, below=0cm of B_code_c] (S1_code_c) {$S_1.code$};
+        \node[block, below=0cm of S1_code_c] (goto_while) {goto $begin$};
+        \node[label] at (B_code_c.north west) {$begin:$};
+        \draw[->] (B_code_c.east) -- +(1, 0.2) node[right] {\scriptsize verso $B.true$};
+        \draw[->] (B_code_c.east) -- +(1, -0.2) node[right] {\scriptsize verso $B.false$};
+        \node[label] at (B_code_c.south west) {$B.true:$};
+        \node[label] at (goto_while.south west) {$B.false:$};
+    \end{tikzpicture}
+    \caption{Codice a tre indirizzi per gli statement if-then, if-then-else e while.}
+\end{figure}

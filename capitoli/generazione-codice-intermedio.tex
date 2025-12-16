@@ -1874,5 +1874,468 @@ La traduzione del costrutto $\textbf{if }(B) S_1$ consiste del codice $B.code$ s
         \node[label] at (B_code_c.south west) {$B.true:$};
         \node[label] at (goto_while.south west) {$B.false:$};
     \end{tikzpicture}
-    \caption{Codice a tre indirizzi per gli statement if-then, if-then-else e while.}
+    \caption{Codice a tre indirizzi per gli statement if-then, if-then-else e while. }
 \end{figure}
+
+
+
+%lezione 15 dicembre 
+\noindent
+Assumiamo che la funzione \texttt{newlabel()} crei una nuova etichetta temporanea ogni volta che viene chiamata. Assumiamo inoltre che \texttt{label(L)} aggiunga l'etichetta $L$ all'istruzione a tre indirizzi che verrà generata immediatamente dopo la chiamata.
+
+Un programma consiste di uno statement generato dalla produzione $P \to S$. Le regole semantiche associate a questa produzione inizializzano l'attributo $S.next$ assegnandogli una nuova etichetta e costruiscono $P.code$ come il concatenamento del codice $S.code$ e della nuova etichetta $S.next$.
+
+Il token \textbf{assign} nella produzione $S \to \textbf{assign}$ è semplicemente un ``segnaposto'' per gli statement di assegnamento la cui traduzione è stata trattata in precedenza. Ai fini della trattazione degli statement per il controllo del flusso, l'azione semantica di un assegnamento copia semplicemente il codice $assign.code$ in $S.code$.
+
+Per la traduzione della produzione $S \to \textbf{if } (B) \ S_1$ le regole semantiche della Figura 15 creano una nuova etichetta $B.true$ e la assegnano alla prima istruzione a tre indirizzi generata come traduzione di $S_1$, secondo lo schema mostrato nella Figura 14(a). In questo modo i salti a $B.true$ che compaiono nel codice relativo a $B$ porteranno il controllo all'inizio del codice di $S_1$. Inoltre assegnando a $S.next$ l'etichetta $B.false$ assicuriamo che il flusso di esecuzione salti il codice relativo a $S_1$ se $B$ assume valore falso.
+
+Nella traduzione dello statement if-then-else descritto dalla produzione $S \to \textbf{if } (B) \ S_1 \ \textbf{else } S_2$ il codice che realizza la valutazione dell'espressione booleana $B$ contiene un salto a $S_1$ se il valore di $B$ è vero e un salto a $S_2$ se il valore di $B$ è falso. Questa implementazione rispecchia lo schema mostrato nella Figura 14(b). In entrambi i casi, poi, il controllo passa alla prima istruzione successiva al codice dello statement $S$, la cui etichetta è memorizzata nell'attributo ereditato $S.next$. Alla fine del codice di $S_1$ è necessaria una istruzione esplicita di salto \texttt{goto} $S.next$ per saltare il codice di $S_2$. Alla fine del codice di $S_2$, invece, una tale istruzione non è necessaria poiché $S_2.next$ coincide con $S.next$.
+
+Il codice generato dalle azioni semantiche della produzione $S \to \textbf{while } (B) \ S_1$ è formato dal $B.code$ e da $S_1.code$ secondo quanto mostrato nella Figura 14(c). Utilizziamo la variabile locale $begin$ per memorizzare una nuova etichetta associata alla prima istruzione del costrutto while.
+L'etichetta $begin$ ha significato solo localmente alla produzione in esame. L'etichetta ereditata $S.next$ indica l'istruzione a cui deve passare il controllo se $B$ risulta falsa; per questa ragione a $B.false$ viene assegnato il valore $S.next$. Una nuova etichetta $B.true$ viene generata e associata alla prima istruzione del codice di $S_1$ e il codice di $B$ contiene un salto a questa etichetta se $B$ risulta vera. Dopo questa istruzione inseriamo il codice \texttt{goto} $begin$, che sposta il controllo all'inizio del codice per il calcolo del valore dell'espressione booleana. Si noti che il valore dell'etichetta $begin$ viene assegnato a $S_1.next$ in modo che eventuali salti interni al codice di $S_1$ possano direttamente portare il controllo all'etichetta $begin$.
+
+Il codice relativo alla produzione $S \to S_1 \ S_2$ consiste semplicemente del codice di $S_1$ seguito dal codice di $S_2$. Le regole semantiche gestiscono le etichette; la prima istruzione immediatamente successiva al codice per $S_1$ è la prima del codice relativo a $S_2$; inoltre, la prima istruzione dopo il codice per $S_2$ è anche la prima istruzione dopo il codice di $S$.
+
+\begin{figure}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l l}
+        \hline
+        \textbf{Produzione} & \textbf{Regole semantiche} \\
+        \hline
+        $P \to S$ & $S.next = \text{newlabel}()$ \\
+                  & $P.code = S.code \parallel \text{label}(S.next)$ \\
+        \hline
+        $S \to \textbf{assign}$ & $S.code = \text{assign}.code$ \\
+        \hline
+        $S \to \textbf{if } ( B ) \ S_1$ & $B.true = \text{newlabel}()$ \\
+                                         & $B.false = S_1.next = S.next$ \\
+                                         & $S.code = B.code \parallel \text{label}(B.true) \parallel S_1.code$ \\
+        \hline
+        $S \to \textbf{if } ( B ) \ S_1 \ \textbf{else } S_2$ & $B.true = \text{newlabel}()$ \\
+                                                              & $B.false = \text{newlabel}()$ \\
+                                                              & $S_1.next = S_2.next = S.next$ \\
+                                                              & $S.code = B.code$ \\
+                                                              & $\quad \parallel \text{label}(B.true) \parallel S_1.code$ \\
+                                                              & $\quad \parallel \text{gen}(\text{'goto'} \ S.next)$ \\
+                                                              & $\quad \parallel \text{label}(B.false) \parallel S_2.code$ \\
+        \hline
+        $S \to \textbf{while } ( B ) \ S_1$ & $begin = \text{newlabel}()$ \\
+                                            & $B.true = \text{newlabel}()$ \\
+                                            & $B.false = S.next$ \\
+                                            & $S_1.next = begin$ \\
+                                            & $S.code = \text{label}(begin) \parallel B.code$ \\
+                                            & $\quad \parallel \text{label}(B.true) \parallel S_1.code$ \\
+                                            & $\quad \parallel \text{gen}(\text{'goto'} \ begin)$ \\
+        \hline
+        $S \to S_1 \ S_2$ & $S_1.next = \text{newlabel}()$ \\
+                          & $S_2.next = S.next$ \\
+                          & $S.code = S_1.code \parallel \text{label}(S_1.next) \parallel S_2.code$ \\
+        \hline
+    \end{tabular}
+    \caption{Definizione guidata dalla sintassi dei costrutti per il controllo del flusso .}
+\end{figure}
+
+La Figura seguente (16) mostra le regole semantiche per la traduzione di queste espressioni in codice a tre indirizzi.
+
+Per le operazioni logiche $\parallel$ (OR) e $\&\&$ (AND), le regole implementano la valutazione con \textbf{corto circuito}:
+\begin{itemize}
+    \item Nel caso $B \to B_1 \parallel B_2$: se $B_1$ è vera, allora $B$ è vera, quindi $B_1.true$ coincide con $B.true$. Se $B_1$ è falsa, dobbiamo valutare $B_2$; pertanto, $B_1.false$ viene assegnato a una nuova etichetta che segna l'inizio del codice di $B_2$.
+    \item Nel caso $B \to B_1 \ \&\& \ B_2$: se $B_1$ è falsa, allora $B$ è falsa, quindi $B_1.false$ coincide con $B.false$. Se $B_1$ è vera, dobbiamo valutare $B_2$; pertanto, $B_1.true$ viene assegnato a una nuova etichetta che segna l'inizio del codice di $B_2$.
+\end{itemize}
+
+Per la negazione $B \to !B_1$, scambiamo semplicemente le etichette di destinazione: $B.true$ diventa $B_1.false$ e $B.false$ diventa $B_1.true$.
+
+Per le espressioni relazionali $E_1 \text{ rel } E_2$, generiamo un salto condizionato basato sul confronto fra 2 espressioni (valori).
+
+\begin{figure}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l l}
+        \hline
+        \textbf{Produzione} & \textbf{Regole semantiche} \\
+        \hline
+        $B \to B_1 \parallel B_2$ & $B_1.true = B.true$ \\
+                                  & $B_1.false = \text{newlabel}()$ \\
+                                  & $B_2.true = B.true$ \\
+                                  & $B_2.false = B.false$ \\
+                                  & $B.code = B_1.code \parallel \text{label}(B_1.false) \parallel B_2.code$ \\
+        \hline
+        $B \to B_1 \ \&\& \ B_2$  & $B_1.true = \text{newlabel}()$ \\
+                                  & $B_1.false = B.false$ \\
+                                  & $B_2.true = B.true$ \\
+                                  & $B_2.false = B.false$ \\
+                                  & $B.code = B_1.code \parallel \text{label}(B_1.true) \parallel B_2.code$ \\
+        \hline
+        $B \to !B_1$              & $B_1.true = B.false$ \\
+                                  & $B_1.false = B.true$ \\
+                                  & $B.code = B_1.code$ \\
+        \hline
+        $B \to E_1 \text{ rel } E_2$ & $B.code = E_1.code \parallel E_2.code$ \\
+                                     & $\quad \parallel \text{gen}(\text{'if'} \ E_1.addr \ \text{rel.op} \ E_2.addr \ \text{'goto'} \ B.true)$ \\
+                                     & $\quad \parallel \text{gen}(\text{'goto'} \ B.false)$ \\
+        \hline
+        $B \to \textbf{true}$        & $B.code = \text{gen}(\text{'goto'} \ B.true)$ \\
+        \hline
+        $B \to \textbf{false}$       & $B.code = \text{gen}(\text{'goto'} \ B.false)$ \\
+        \hline
+    \end{tabular}
+    \caption{Generazione del codice a tre indirizzi per le espressioni booleane.}
+\end{figure}
+
+
+\subsubsection*{Esempio: Generazione del Codice non Ottimizzato}
+
+Usando le definizioni guidate dalla sintassi delle Figure 15 e 16 otterremmo il codice a tre indirizzi per lo statement seguente:
+
+$$ \textbf{if } ( \underbrace{x < 100}_{B_1} \parallel (\underbrace{x > 200}_{B_{21}} \ \&\& \ \underbrace{x != y}_{B_{22}}) ) \ x = 0; $$
+
+\paragraph{Analisi della generazione delle etichette}
+Lo statement costituisce un programma generato dalla produzione $P \to S$.
+\begin{enumerate}
+    \item Le regole semantiche generano la nuova etichetta $L_1$ per la prima istruzione successiva al codice di $S$ (ovvero $S.next = L_1$).
+    \item Lo statement $S$ ha la forma $\textbf{if } (B) \ S_1$ in cui $S_1$ è l'assegnamento $x=0$. Le regole generano la nuova etichetta $L_2$ e la associano alla prima (e unica in questo caso) istruzione del codice $S_1.code$.
+\end{enumerate}
+
+L'espressione booleana $B$ ha la forma $B_1 \parallel B_2$, dove $B_1$ è $x < 100$ e $B_2$ è l'espressione composta $x > 200 \ \&\& \ x != y$.
+Secondo le regole della Figura 6.37:
+\begin{itemize}
+    \item A $B_1.true$ viene assegnato il valore $L_2$ (l'etichetta dell'assegnamento $x=0$).
+    \item A $B_1.false$ viene assegnata la nuova etichetta $L_3$, associata alla prima istruzione del codice relativo a $B_2$.
+\end{itemize}
+
+Applicando le regole semantiche e scendendo lungo l'albero sintattico, le etichette vengono propagate come attributi ereditati. Possiamo ricostruire l'assegnazione completa delle etichette per le sotto-espressioni nel seguente modo:
+\begin{align*}
+    B_1.true &= B.true =L_2 \\
+    B_1.false &= L_3 \\
+    B_2.true &= L_2 \\
+    B_2.false &= B.false = L_1\\[1em]
+    \text{Per } B_1 &: \\
+    B.true &= L_2 \\
+    B.false &= L_1 \\
+    S_1.n &= S.next = L_1 \\[1em]
+    \text{Per } B_2 \ (B_{21} \ \&\& \ B_{22}) &: \\
+    B_{21}.true &= L_4 \quad (\text{nuova etichetta}) \\
+    B_{21}.false &= L_1 \\
+    B_{22}.true &= L_2 \\
+    B_{22}.false &= L_1
+\end{align*}
+
+\paragraph{Codice generato}
+Il risultato dell'applicazione di queste regole è il seguente codice (che contiene istruzioni ridondanti):
+
+\begin{lstlisting}
+       if x < 100 goto L2
+       goto L3
+L3:    if x > 200 goto L4
+       goto L1
+L4:    if x != y goto L2
+       goto L1
+L2:    x = 0
+L1:
+\end{lstlisting}
+
+\subsubsection{Evitare salti ridondanti}
+
+Si noti che il codice generato non è ottimizzato: esso infatti presenta tre istruzioni (le istruzioni \texttt{goto}) in più rispetto a una traduzione manuale ottimizzata.
+
+In particolare:
+\begin{itemize}
+    \item L'istruzione \texttt{goto L3} è ridondante, poiché $L_3$ è l'etichetta dell'istruzione immediatamente successiva.
+    \item È possibile eliminare le due istruzioni \texttt{goto L1} semplicemente ricorrendo a istruzioni \texttt{ifFalse} al posto di istruzioni \texttt{if}.
+\end{itemize}
+
+Per risolvere questo problema ed evitare istruzioni \texttt{goto} ridondanti, si può utilizzare un'etichetta speciale chiamata \textit{fall} (che significa ``non generare alcun salto''). Questo permette al flusso di controllo di \textbf{andare in cascata} dal codice di $B$ al codice di $S_1$ senza alcun salto.
+
+Utilizzando questa etichetta, adattiamo le regole semantiche in questo modo:
+\begin{itemize}
+    \item \textbf{Statement:} Assegnano \textit{fall} all'attributo $B.true$.
+    \item \textbf{Condizione Booleana:} Generano istruzioni di salto solo in corrispondenza a etichette il cui valore è diverso da \textit{fall}.
+\end{itemize}
+
+\paragraph{Regole Semantiche per Espressioni Relazionali ($B \to E_1 \text{ rel } E_2$)}
+
+Le nuove regole, riportate nella figura seguente, generano istruzioni di salto ottimizzate basandosi sul valore delle etichette.
+Se un'etichetta è \textit{fall}, significa che il flusso deve proseguire sequenzialmente e non viene generato il salto corrispondente.
+
+Si distinguono tre casi principali:
+\begin{enumerate}
+    \item \textbf{Entrambe esplicite:} Se né $B.true$ né $B.false$ sono \textit{fall}, si generano due istruzioni: un salto condizionato e uno incondizionato.
+    \item \textbf{$B.true$ è \textit{fall}:} Si genera un \texttt{ifFalse} verso $B.false$. Se la condizione è vera, il flusso ``cade'' nell'istruzione successiva.
+    \item \textbf{$B.false$ è \textit{fall}:} Si genera un \texttt{if} verso $B.true$. Se la condizione è falsa, il flusso prosegue.
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.95\textwidth}
+        \textbf{Produzione $B \to E_1 \text{ rel } E_2$} \\
+    $test = E_1.addr \text{ rel.op } E_2.addr$ \\
+    $s =$
+    \begin{tabbing}
+    \quad \textbf{if} $B.true \neq fall$ \textbf{and} $B.false \neq fall$ \textbf{then} \\
+    \quad \quad $gen(\text{'if'} \ test \ \text{'goto'} \ B.true) \parallel gen(\text{'goto'} \ B.false)$ \\
+    \quad \textbf{else if} $B.true \neq fall$ \textbf{then} $gen(\text{'if'} \ test \ \text{'goto'} \ B.true)$ \\
+    \quad \textbf{else if} $B.false \neq fall$ \textbf{then} $gen(\text{'ifFalse'} \ test \ \text{'goto'} \ B.false)$ \\
+    \quad \textbf{else} $''$ (nessun codice generato)
+    \end{tabbing}
+    $B.code = E_1.code \parallel E_2.code \parallel s$
+    \end{minipage}
+    \caption{Regole semantiche per $B \to E_1 \text{ rel } E_2$ con gestione dell'etichetta \textit{fall}.}
+\end{figure}
+
+\paragraph{Regole Semantiche per l'Operatore OR ($B \to B_1 \parallel B_2$)}
+
+Per l'operatore OR, se $B_1$ è falso dobbiamo valutare $B_2$, quindi impostiamo $B_1.false = fall$ per entrare nel codice di $B_2$ senza salti.
+
+Se $B_1$ è vero, l'intera espressione è vera. Qui sorge un problema se $B.true$ è \textit{fall}: ``cadere'' dopo $B_1$ significherebbe eseguire erroneamente $B_2$.
+Pertanto, se $B.true$ è \textit{fall}, dobbiamo forzare un salto oltre $B_2$: creiamo una nuova etichetta per $B_1.true$ e la posizioniamo alla fine del codice.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.95\textwidth}
+    \textbf{Produzione $B \to B_1 \parallel B_2$} \\
+    $B_1.true = \textbf{if } B.true \neq fall \textbf{ then } B.true \textbf{ else } newlabel()$ \\
+    $B_1.false = fall$ \\
+    $B_2.true = B.true$ \\
+    $B_2.false = B.false$ \\
+    $B.code = $
+    \begin{tabbing}
+    \quad \textbf{if} $B.true \neq fall$ \textbf{then} $B_1.code \parallel B_2.code$ \\
+    \quad \textbf{else} $B_1.code \parallel B_2.code \parallel label(B_1.true)$
+    \end{tabbing}
+    \end{minipage}
+    \caption{Regole semantiche per l'OR (Figura 6.40). Se $B.true$ è \textit{fall}, viene creata un'etichetta locale per saltare $B_2$.}
+\end{figure}
+
+\bigskip
+\noindent \textbf{Regole Semantiche per l'Operatore AND ($B \to B_1 \ \&\& \ B_2$)}
+
+Per l'operatore AND, la logica è speculare a quella dell'OR. Se $B_1$ è vero, dobbiamo "cadere" nella valutazione di $B_2$ (quindi $B_1.true = fall$). Se invece $B_1$ è falso, l'intera espressione è falsa; se $B.false$ è \textit{fall}, dobbiamo creare un'etichetta esplicita per saltare $B_2$.
+
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.95\textwidth}
+    \textbf{Produzione $B \to B_1 \ \&\& \ B_2$} \\
+    $B_1.true = fall$ \\
+    $B_1.false = \textbf{if } B.false \neq fall \textbf{ then } B.false \textbf{ else } newlabel()$ \\
+    $B_2.true = B.true$ \\
+    $B_2.false = B.false$ \\
+    $B.code = $
+    \begin{tabbing}
+    \quad \textbf{if} $B.false \neq fall$ \textbf{then} $B_1.code \parallel B_2.code$ \\
+    \quad \textbf{else} $B_1.code \parallel B_2.code \parallel label(B_1.false)$
+    \end{tabbing}
+    \end{minipage}
+    \caption{Regole semantiche per l'AND con gestione del fall (derivate dalle note manoscritte).}
+\end{figure}
+
+\subsubsection{Esempio 6.23: Traduzione con Codice a Cascata}
+
+Consideriamo nuovamente il programma dell'Esempio precedente:
+$$ \textbf{if } ( x < 100 \parallel x > 200 \ \&\& \ x != y ) \ x = 0; $$
+
+Applicando le nuove regole:
+\begin{enumerate}
+    \item Per la produzione $B \to B_1 \parallel B_2$, l'attributo ereditato $B.true$ assume valore \textit{fall} (perché siamo in un \texttt{if} e vogliamo entrare nel corpo), mentre $B.false$ vale $L_1$.
+    \item Le regole della Figura 18 creano l'etichetta $L_2$ per $B_1.true$ (poiché $B.true$ è \textit{fall}) in modo da poter saltare oltre il codice di $B_2$ se $B_1$ risulta vera. $B_1.false$ viene impostato a \textit{fall}.
+    \item La produzione $B \to E_1 \text{ rel } E_2$ per $x < 100$ viene raggiunta con $B_1.true = L_2$ e $B_1.false = fall$. Le regole della Figura 17 generano quindi la sola istruzione \texttt{if x < 100 goto L2}.
+\end{enumerate}
+
+Il codice risultante è molto più compatto:
+
+\begin{lstlisting}
+       if x < 100 goto L2
+       ifFalse x > 200 goto L1
+       ifFalse x != y goto L1
+L2:    x = 0
+L1:
+\end{lstlisting}
+
+\subsubsection{Valori Booleani}
+
+Finora abbiamo rivolto l'attenzione all'uso delle espressioni booleane per alterare il flusso di controllo delle istruzioni. Una espressione booleana, tuttavia, può anche essere valutata per ottenerne il valore, per esempio nelle istruzioni di assegnamento come \texttt{x = true;} o \texttt{x = a<b;}.
+
+Un modo elegante per trattare entrambi gli usi delle espressioni booleane consiste nel costruire per prima cosa l'albero sintattico, secondo uno dei due seguenti approcci:
+
+\begin{enumerate}
+    \item \textit{Due passate.} Si costruisce dapprima l'intero albero sintattico del programma in ingresso, quindi, in una seconda passata, si visita l'albero in profondità e si calcola la traduzione specificata dalle regole semantiche.
+    \item \textit{Una passata per le istruzioni, due per le espressioni.} Secondo questo approccio, per un programma come $\textbf{while } (E) \ S_1$ si tradurrebbe $E$ prima di iniziare a elaborare $S_1$. La traduzione di $E$, tuttavia, seguirebbe lo schema già visto che prevede quindi prima la costruzione dell'albero e poi una seconda passata per la traduzione.
+\end{enumerate}
+
+Consideriamo ad esempio l'assegnamento booleano:
+$$ x = a < b \ \&\& \ c < d $$
+
+Questo potrebbe essere tradotto nel seguente codice, dove vengono mostrati gli **indirizzi fisici** delle istruzioni (100, 101, ecc.) accanto al codice simbolico:
+
+\begin{lstlisting}[mathescape=true]
+100    ifFalse a < b goto L1
+101    ifFalse c > d goto L1
+102    t = true
+103    goto L2
+104 L1: t = false
+105 L2: x = t
+\end{lstlisting}
+
+\noindent
+Si noti che l'utilizzo degli **indirizzi fisici delle istruzioni** (come mostrato nella colonna di sinistra: 100, 104, 105) permetterebbe di eliminare le etichette simboliche $L_1$ e $L_2$, scrivendo direttamente il numero dell'istruzione di destinazione nel salto.
+Tuttavia, questo crea un problema: spesso l'indirizzo di destinazione non è noto nel momento in cui viene generata l'istruzione di salto. Questo problema introduce la necessità del \textbf{Backpatching}.
+
+
+\subsection{Backpatching}
+
+Un problema cruciale nella generazione del codice a una sola passata è determinare l'etichetta di destinazione di un salto prima che questa venga analizzata (come nel caso di un salto oltre il codice di $S$ in un'istruzione \textbf{if} quando la condizione è falsa).
+
+Mentre l'approccio precedente basato su attributi ereditati richiedeva una seconda passata per risolvere gli indirizzi, il \textbf{backpatching} risolve il problema utilizzando opportuni attributi sintetizzati per propagare liste di salti.
+
+Il funzionamento è il seguente: quando viene generato un salto, la destinazione viene lasciata temporaneamente non specificata e l'istruzione viene aggiunta a una lista. Tale lista raccoglie tutti i salti che attendono la medesima etichetta di destinazione. L'indirizzo effettivo viene inserito (``patchato'') in un secondo momento, non appena sarà possibile determinarlo con esattezza.
+\subsubsection{Generazione del codice in una passata mediante backpatching}
+
+Per semplicità supponiamo di memorizzare le istruzioni generate in un array e di utilizzare l'indice di un'istruzione come sua etichetta. Per manipolare le liste di salti utilizzeremo le tre seguenti funzioni:
+
+\begin{enumerate}
+    \item $makelist(i)$: crea una nuova lista contenente solamente l'indice $i$ di un elemento di un'istruzione dell'array e restituisce un puntatore alla lista appena creata.
+    \item $merge(p_1, p_2)$: concatena le liste puntate da $p_1$ e $p_2$ e restituisce un puntatore alla lista risultante.
+    \item $backpatch(p, i)$: inserisce $i$ come etichetta di destinazione in ognuna delle istruzioni nella lista puntata da $p$.
+\end{enumerate}
+
+\subsubsection{Backpatching delle Espressioni Booleane}
+
+Inseriamo un non-terminale marcatore $M$ nella grammatica per forzare la generazione di un'azione semantica in punti specifici, permettendoci di catturare l'indice dell'istruzione corrente.
+La figura seguente mostra lo schema di traduzione.
+
+\begin{figure}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l l}
+        \hline
+        \textbf{Produzione} & \textbf{Regole semantiche} \\
+        \hline
+        1) $B \to B_1 \parallel M \ B_2$ & $\{ \ backpatch(B_1.falselist, M.instr);$ \\
+                                         & $\quad B.truelist = merge(B_1.truelist, B_2.truelist);$ \\
+                                         & $\quad B.falselist = B_2.falselist; \ \}$ \\
+        \hline
+        2) $B \to B_1 \ \&\& \ M \ B_2$  & $\{ \ backpatch(B_1.truelist, M.instr);$ \\
+                                         & $\quad B.truelist = B_2.truelist;$ \\
+                                         & $\quad B.falselist = merge(B_1.falselist, B_2.falselist); \ \}$ \\
+        \hline
+        3) $B \to !B_1$                  & $\{ \ B.truelist = B_1.falselist;$ \\
+                                         & $\quad B.falselist = B_1.truelist; \ \}$ \\
+        \hline
+        4) $B \to ( B_1 )$               & $\{ \ B.truelist = B_1.truelist;$ \\
+                                         & $\quad B.falselist = B_1.falselist; \ \}$ \\
+        \hline
+        5) $B \to E_1 \text{ rel } E_2$  & $\{ \ B.truelist = makelist(nextinstr);$ \\
+                                         & $\quad B.falselist = makelist(nextinstr + 1);$ \\
+                                         & $\quad gen(\text{'if'} \ E_1.addr \ \text{rel.op} \ E_2.addr \ \text{'goto'} \ \_ );$ \\
+                                         & $\quad gen(\text{'goto -'} ); \ \} ('-' \text{ indica incompleta)}$ \\
+        \hline
+        6) $B \to \textbf{true}$         & $\{ \ B.truelist = makelist(nextinstr);$ \\
+                                         & $\quad gen(\text{'goto -'} \ \ ); \ \}$ \\
+        \hline
+        7) $B \to \textbf{false}$        & $\{ \ B.falselist = makelist(nextinstr);$ \\
+                                         & $\quad gen(\text{'goto -'} \ \ ); \ \}$ \\
+        \hline
+        8) $M \to \epsilon$              & $\{ \ M.instr = nextinstr; \ \}$ \\
+        \hline
+    \end{tabular}
+    \caption{Schema di traduzione delle espressioni booleane (Figura 6.43).}
+\end{figure}
+
+\paragraph{Analisi delle regole}
+Consideriamo l'azione semantica (1) relativa alla produzione $B \to B_1 \parallel M \ B_2$.
+Se $B_1$ è vera anche $B$ è vera, quindi i salti che si trovano in $B_1.truelist$ diventano parte di $B.truelist$.
+Se invece $B_1$ è falsa è necessario valutare $B_2$; quindi l'etichetta di destinazione dei salti in $B_1.falselist$ deve essere l'inizio del codice generato per $B_2$.
+Tale etichetta è ottenuta grazie al non-terminale marcatore $M$ che produce come attributo sintetizzato $M.instr$ l'indice della prossima istruzione che sarà generata, immediatamente prima che inizi la generazione del codice di $B_2$.
+
+Per ottenere l'indice di tale istruzione associamo alla produzione $M \to \epsilon$ l'azione semantica:
+$$ \{ \ M.instr = nextinstr; \ \} $$
+La variabile $nextinstr$ mantiene l'indice della successiva istruzione. In questo modo tale indirizzo verrà usato per il backpatching della lista $B_1.falselist$ (ogni istruzione della lista riceverà l'indice $M.instr$ come etichetta destinazione) quando il parser avrà analizzato la parte rimanente della produzione $B \to B_1 \parallel M \ B_2$.
+
+L'azione semantica (2) relativa alla produzione $B \to B_1 \ \&\& \ M \ B_2$ è simile alla (1).
+L'azione semantica (3) semplicemente scambia le liste $truelist$ e $falselist$.
+Per semplicità, l'azione semantica (5) genera due istruzioni: un salto condizionato e uno incondizionato; per entrambe le istruzioni la destinazione del salto rimane non specificata (indicata con un trattino `\_'). Tali istruzioni vengono poi inserite rispettivamente nelle liste puntate da $B.truelist$ e $B.falselist$.
+
+\bigskip
+\noindent \textbf{Esempio Pratico di Backpatching}
+
+Consideriamo l'espressione booleana dell'esempio precedente:
+$$ x < 100 \parallel (x > 200 \ \&\& \ x != y) $$
+
+L'immagine seguente mostra l'albero sintattico annotato. Le liste \textit{truelist} ($tl$) e \textit{falselist} ($fl$) vengono sintetizzate (risalgono l'albero). I marcatori $M$ catturano l'indice dell'istruzione successiva per gestire i salti.
+
+\begin{center}
+\begin{tikzpicture}[
+    scale=0.9, transform shape,
+    level distance=2.2cm,
+    every node/.style={align=center, font=\small},
+    % Stile per le etichette degli attributi (liste)
+    attr/.style={font=\footnotesize},
+    % Stile per i nodi foglia/operatori
+    sym/.style={font=\bfseries},
+    % Stile per le espressioni foglia
+    expr/.style={font=\ttfamily\footnotesize}
+]
+
+% --- RADICE (Nodo astratto per l'OR) ---
+\node[attr] (root) {$B.t = \{100, 104\}$ \\ $B.f = \{103, 105\}$}
+    % 1. Figlio Sinistro (x < 100)
+    child[sibling distance=3.5cm] { 
+        node[attr] {$B.t = \{100\}$ \\ $B.f = \{101\}$}
+        child { node[expr] {x < 100} }
+    }
+    % 2. Operatore ||
+    child[sibling distance=1.5cm] { node[sym] {$\parallel$} }
+    % 3. Marcatore M1 (M.i = 102)
+    child[sibling distance=2.5cm] { 
+        node {$M.i = 102$}
+        child { node {$\epsilon$} }
+    }
+    % 4. Figlio Destro (Sottoalbero AND)
+    child[sibling distance=4.0cm] { 
+        node[attr] {$B.t = \{104\}$ \\ $B.f = \{103, 105\}$}
+        % A. Figlio Sinistro AND (x > 200)
+        child[sibling distance=2.5cm] {
+            node[attr] {$B.t = \{102\}$ \\ $B.f = \{103\}$}
+            child { node[expr] {x > 200} }
+        }
+        % B. Operatore &&
+        child[sibling distance=1.2cm] { node[sym] {\&\&} }
+        % C. Marcatore M2 (M.i = 104)
+        child[sibling distance=1.8cm] { 
+            node {$M.i = 104$}
+            child { node {$\epsilon$} }
+        }
+        % D. Figlio Destro AND (x != y)
+        child[sibling distance=2.5cm] {
+            node[attr] {$B.t = \{104\}$ \\ $B.f = \{105\}$}
+            child { node[expr] {x != y} }
+        }
+    };
+
+\end{tikzpicture}
+\end{center}
+
+\textbf{Generazione del codice e Backpatching:}
+
+Il codice viene generato sequenzialmente (istruzioni 100-105). Inizialmente, le destinazioni dei salti sono vuote (trattino `-`). Il backpatching riempie queste caselle quando i marcatori $M$ determinano l'indirizzo.
+
+\begin{lstlisting}[mathescape=true, escapechar=|]
+100    if x < 100 goto -      |$\leftarrow \in tl$ (resta vuoto per ora)|
+101    goto 102               |$\leftarrow$ Backpatch($B_1.fl$, $M_1.i$)|
+102    if x > 200 goto 104    |$\leftarrow$ Backpatch($B_{21}.tl$, $M_2.i$)|
+103    goto -                 |$\leftarrow \in fl$ (merge con 105)|
+104    if x != y goto -       |$\leftarrow \in tl$ (merge con 100)|
+105    goto -                 |$\leftarrow \in fl$ (resta vuoto per ora)|
+\end{lstlisting}
+
+\noindent
+Analisi dei passaggi in relazione all'albero:
+\begin{enumerate}
+    \item \textbf{Gestione dell'OR:} L'istruzione 101 è il salto generato quando $x < 100$ è falso ($B_1.f$). Poiché siamo in un OR, se la prima parte è falsa dobbiamo valutare la seconda. Il marcatore $M$ a sinistra (che chiamiamo $M_1$) ha catturato l'indice \textbf{102}. Quindi, si esegue il \textit{backpatch} di 101 con 102.
+    \item \textbf{Gestione dell'AND:} L'istruzione 102 è il salto generato quando $x > 200$ è vero ($B_{21}.t$). In un AND, se il primo operando è vero, dobbiamo valutare il secondo. Il marcatore $M$ a destra (che chiamiamo $M_2$) ha catturato l'indice \textbf{104}. Quindi, si esegue il \textit{backpatch} di 102 con 104.
+    \item \textbf{Liste Finali:} Risalendo alla radice, le liste finali risultanti sono:
+    \begin{itemize}
+        \item $B.truelist = \{100, 104\}$: Se $x<100$ (100) è vero ORA $x!=y$ (104) è vero, l'intera espressione è vera.
+        \item $B.falselist = \{103, 105\}$: Se $x>200$ è falso (103) ORA $x!=y$ è falso (105), l'intera espressione è falsa.
+    \end{itemize}
+\end{enumerate}

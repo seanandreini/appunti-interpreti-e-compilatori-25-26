@@ -2339,3 +2339,263 @@ Analisi dei passaggi in relazione all'albero:
         \item $B.falselist = \{103, 105\}$: Se $x>200$ è falso (103) ORA $x!=y$ è falso (105), l'intera espressione è falsa.
     \end{itemize}
 \end{enumerate}
+
+
+%lezione 17 dicembre
+\subsubsection{Statement per il controllo del flusso}
+
+Usiamo ora il backpatching per tradurre gli statement per il controllo del flusso in una sola passata. 
+Gli statement generati ($S$) e le liste di statement ($L$) possiedono un attributo sintetizzato chiamato $nextlist$.
+\begin{itemize}
+    \item $S.nextlist$: è la lista di tutti i salti (condizionati e incondizionati) che devono portare il controllo all'istruzione che segue immediatamente il codice di $S$.
+    \item $L.nextlist$: definita in modo simile per una sequenza di istruzioni.
+\end{itemize}
+
+La Figura seguente mostra lo schema di traduzione completo, che utilizza i marcatori $M$ (per catturare l'indirizzo corrente) e un nuovo marcatore $N$ (per generare salti incondizionati).
+
+\begin{figure}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{l l}
+        \hline
+        \textbf{Produzione} & \textbf{Regole semantiche} \\
+        \hline
+        $S \to \textbf{if } ( B ) \ M \ S_1$ & $backpatch(B.truelist, M.instr);$ \\
+                                             & $S.nextlist = merge(B.falselist, S_1.nextlist);$ \\
+        \hline
+        $S \to \textbf{if } ( B ) \ M_1 \ S_1 \ N \ \textbf{else } M_2 \ S_2$ & $backpatch(B.truelist, M_1.instr);$ \\
+                                                                             & $backpatch(B.falselist, M_2.instr);$ \\
+                                                                             & $temp = merge(S_1.nextlist, N.nextlist);$ \\
+                                                                             & $S.nextlist = merge(temp, S_2.nextlist);$ \\
+        \hline
+        $S \to \textbf{while } M_1 \ ( B ) \ M_2 \ S_1$ & $backpatch(S_1.nextlist, M_1.instr);$ \\
+                                                        & $backpatch(B.truelist, M_2.instr);$ \\
+                                                        & $S.nextlist = B.falselist;$ \\
+                                                        & $gen(\text{'goto'} \ M_1.instr);$ \\
+        \hline
+        $S \to \{ L \}$ & $S.nextlist = L.nextlist;$ \\
+        \hline
+        $S \to A;$ & $S.nextlist = \text{null};$ \\
+        \hline
+        $M \to \epsilon$ & $M.instr = nextinstr;$ \\
+        \hline
+        $N \to \epsilon$ & $N.nextlist = makelist(nextinstr);$ \\
+                         & $gen(\text{'goto'} \ \_ );$ \\
+        \hline
+        $L \to L_1 \ M \ S$ & $backpatch(L_1.nextlist, M.instr);$ \\
+                            & $L.nextlist = S.nextlist;$ \\
+        \hline
+        $L \to S$ & $L.nextlist = S.nextlist;$ \\
+        \hline
+    \end{tabular}
+    \caption{Traduzione degli statement per il controllo del flusso.}
+\end{figure}
+
+\paragraph{Analisi delle Regole}
+
+\begin{itemize}
+    \item \textbf{If-Else e il marcatore $N$ (Regola 2 e 7):}
+    Nel costrutto if-then-else, quando il controllo raggiunge la fine di $S_1$, è necessario saltare oltre il codice di $S_2$. Per generare questo salto incondizionato si utilizza il marcatore $N$.
+    La produzione $N \to \epsilon$ genera l'istruzione \texttt{goto \_} e crea una lista ($N.nextlist$) contenente questo salto in sospeso. Questa lista verrà poi unita a $S_1.nextlist$ e $S_2.nextlist$ per formare l'uscita complessiva dello statement.
+
+    \item \textbf{Ciclo While (Regola 3):}
+    Utilizziamo due marcatori: $M_1$ per memorizzare l'inizio dell'espressione booleana (dove tornare per ripetere il ciclo) e $M_2$ per l'inizio del corpo $S_1$.
+    \begin{itemize}
+        \item $B.truelist$ viene backpatchato a $M_2.instr$: se la condizione è vera, il controllo passa all'inizio del corpo $S_1$.
+        \item $S_1.nextlist$ viene backpatchato a $M_1.instr$: ogni volta che il corpo finisce l'esecuzione, si torna a valutare la condizione.
+        \item Viene generato un salto esplicito \texttt{goto} $M_1.instr$ dopo il codice di $S_1$ per garantire il ritorno all'inizio del ciclo anche nel flusso sequenziale.
+    \end{itemize}
+
+    \item \textbf{Sequenza di Statement (Regola 8):}
+    Nella produzione $L \to L_1 \ M \ S$, il marcatore $M$ serve a unire le due parti. Tutte le istruzioni in $L_1.nextlist$ (cioè le uscite di $L_1$) vengono direzionate verso l'inizio di $S$ ($M.instr$). La nuova lista di uscita $L.nextlist$ diventa semplicemente quella di $S$.
+\end{itemize}
+
+\subsubsection{Statement Break e Continue}
+
+La gestione di istruzioni di uscita forzata come \texttt{break} (e analogamente \texttt{continue}) all'interno di costrutti iterativi o condizionali richiede un meccanismo per collegare il salto all'uscita del blocco contenitore.
+
+Il procedimento generale è il seguente:
+
+\begin{enumerate}
+    \item \textbf{Tenere traccia del contenitore:} È necessario identificare lo statement contenitore $S$ (ad esempio un ciclo \texttt{while} o uno \texttt{switch}) all'interno del quale si trova il \texttt{break}.
+    \item \textbf{Generazione del salto:} Si genera un'istruzione di salto incompleta (incondizionata) e la si inserisce nella lista $S.nextlist$. Poiché non conosciamo ancora dove finisce il blocco $S$, non possiamo scrivere l'indirizzo di destinazione.
+    \item \textbf{Backpatching:} Al momento in cui diventa noto l'indirizzo effettivo a cui saltare (ovvero l'istruzione successiva alla fine del blocco $S$), si effettua il backpatching di tutta la lista $S.nextlist$.
+\end{enumerate}
+
+\paragraph{Parser a 2 Passate}
+
+Durante la costruzione dell'albero sintattico, quando si entra in uno statement contenitore (come \textit{loop} o \textit{switch}), si inserisce nella \textbf{Tabella dei Simboli (TS)} una voce speciale per l'identificatore `break'.
+
+Tale voce viene associata a:
+
+\begin{itemize}
+    \item \textbf{Al nodo di $S$:} La voce punta al nodo dello statement contenitore. Quando si incontra un \texttt{break}, si risale al nodo $S$ e si aggiunge il salto a $S.nextlist$.
+    
+    \item[$\parallel$] \textbf{A $S.nextlist$ (Alternativa):} Esiste un'alternativa in cui si inserisce nella TS un puntatore direttamente alla lista $S.nextlist$. In questo caso, al momento del \texttt{break}, si aggiunge il salto direttamente alla lista senza passare per il nodo.
+\end{itemize}
+
+\subsection{Statement switch}
+La sintassi dello statement \texttt{switch} è il seguente:
+$$
+\begin{array}{l}
+\textbf{switch } (E) \ \{ \\
+\quad \textbf{case } V_1: S_1 \\
+\quad \textbf{case } V_2: S_2 \\
+\quad \dots \\
+\quad \textbf{case } V_{n-1}: S_{n-1} \\
+\quad \textbf{default}: S_n \\
+\}
+\end{array}
+$$
+
+\subsubsection{Traduzione del Costrutto Switch}
+Il comportamento previsto prevede tre fasi:
+\begin{enumerate}
+    \item Valutazione dell'espressione $E$.
+    \item Ricerca, nell'elenco dei casi, del valore $V_j$ uguale al risultato della valutazione di E. Se nessun caso corrisponde, si seleziona il \textit{default}.
+    \item Esecuzione dello statement $S_j$ associato al valore $V_j$ trovato.
+\end{enumerate}
+
+Il passo (2), ovvero il salto a $n$ vie, può essere implementato in modi diversi a seconda della natura e del numero dei casi \textit{case}.
+
+\paragraph{Strategia 1: Numero di casi ridotto ($\le 10$)}
+È ragionevole utilizzare una sequenza di salti condizionati, ognuno dei quali esegue il confronto con uno specifico valore e trasferisce il controllo al codice degli statement corrispondenti.
+Un modo compatto per implementarlo consiste nel creare una tabella di coppie $<V, L>$ (Valore, Etichetta).
+$$ <V_1, L_1>, \ <V_2, L_2>, \ \dots $$
+Il valore dell'espressione viene confrontato sequenzialmente con i valori nella tabella.
+
+\paragraph{Strategia 2: Numero di casi elevato ($> 10$) e sparsi}
+Se il numero di casi è notevole, è più efficiente ricorrere a una Tabella di Hash.
+In tale tabella vengono memorizzate le etichette dei corrispondenti statement indicizzate dai valori dei casi. Se non esiste un elemento corrispondente al valore assunto dall'espressione, viene generata un'istruzione di salto allo statement di \textit{default}.
+
+\paragraph{Strategia 3: Valori in un intervallo limitato }
+Se tutti i valori dei vari casi appartengono a un intervallo limitato $[min, max]$ e coprono una buona parte dei valori tra gli estremi, si può costruire un array di $(max - min + 1)$ elementi.
+
+Il funzionamento è il seguente:
+\begin{itemize}
+    \item Si costruisce un array in cui l'elemento con indice $j - min$ contiene l'etichetta dello statement relativo al valore $j$.
+    \item Agli elementi che non corrispondono a nessun caso esplicito viene assegnata l'etichetta del \textit{default}.
+    \item A tempo di esecuzione, si valuta l'espressione ottenendo un valore $j$.
+    \item Si verifica che $min \le j \le max$.
+    \item Si trasferisce il controllo in modo indiretto all'etichetta memorizzata nell'array all'indice:
+    $$ \text{indice} = j - min $$
+\end{itemize}
+
+\textbf{Esempio pratico dagli appunti:}
+Se l'intervallo è $150 - 159$ ($min=150$) e abbiamo i casi $153$ e $155$:
+\begin{itemize}
+    \item Il valore $153$ si troverà all'indice $153 - 150 = 3$.
+    \item Il valore $155$ si troverà all'indice $155 - 150 = 5$.
+\end{itemize}
+
+
+\subsubsection{Traduzione guidata dalla sintassi degli statement switch}
+
+La Figura 22 mostra due strategie per generare il codice intermedio di uno statement \texttt{switch}. In entrambi i casi si assume che il valore dell'espressione $E$ sia stato valutato in una variabile temporanea $t$.
+
+\begin{enumerate}
+    \item \textbf{Salti Finali (a):} Il codice dei vari casi viene generato sequenzialmente all'inizio. Al termine, una serie di istruzioni condizionali (\texttt{if}) indirizza il flusso all'etichetta corretta ($L_1, L_2, \dots$).
+    \item \textbf{Salti Intermedi (b):} Il controllo viene effettuato "in linea": se il test fallisce ($t \neq V_1$), si salta al controllo successivo ($L_1$); se ha successo, si esegue il codice e si salta alla fine (\texttt{goto next}).
+\end{enumerate}
+
+\begin{figure}[H]
+    \centering
+    % Impostiamo font monospazio per tutto il blocco per simulare il codice
+    \ttfamily \small
+    
+    \begin{minipage}[t]{0.48\textwidth}
+        \textbf{\rmfamily (a) Salti finali} \\ % \rmfamily per tornare al font normale per il titolo
+        \begin{tabbing}
+        \hspace{1.2cm} \= \kill % Imposta il tab stop a 1.2cm
+        \> valutazione di E in t \\
+        \> goto test \\
+        $L_1$: \> codice di $S_1$ \\
+        \> goto next \\
+        $L_2$: \> codice di $S_2$ \\
+        \> goto next \\
+        \> \dots \\
+        $L_n$: \> codice di $S_n$ \\
+        \> goto next \\
+        test: \> if t = $V_1$ goto $L_1$ \\
+        \> if t = $V_2$ goto $L_2$ \\
+        \> \dots \\
+        \> if t = $V_{n-1}$ goto $L_{n-1}$ \\
+        \> goto $L_n$ \\
+        next:
+        \end{tabbing}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \textbf{\rmfamily (b) Salti intermedi} \\
+        \begin{tabbing}
+        \hspace{1.2cm} \= \kill % Imposta il tab stop a 1.2cm
+        \> valutazione di E in t \\
+        \> if t != $V_1$ goto $L_1$ \\
+        \> codice di $S_1$ \\
+        \> goto next \\
+        $L_1$: \> if t != $V_2$ goto $L_2$ \\
+        \> codice di $S_2$ \\
+        \> goto next \\
+        $L_1$: \\
+        \>  \dots \\
+        $L_{n-2}$: if t != $V_{n-1}$ goto $L_{n-1}$ \\
+        \> codice di $S_{n-1}$ \\
+        \> goto next \\
+        $L_{n-1}$: \> codice di $S_n$ \\
+        next:
+        \end{tabbing}
+    \end{minipage}
+    \caption{Traduzioni di uno statement switch.}
+\end{figure}
+
+\subsection{Codice Intermedio delle Procedure}
+Per gestire definizioni e chiamate di funzioni, estendiamo la grammatica e utilizziamo la Tabella dei Simboli per gestire gli scope.
+La grammatica utilizzata è la seguente:
+
+$$ D \to \textbf{define } id \ (F) \ \{ S \} $$
+$$ F \to \epsilon \mid T \ id, \ F \quad (\text{Lista parametri formali}) $$
+$$ S \to \textbf{return } E; \mid id(A); $$
+$$ E \to id(A); \quad (\text{Chiamata funzione in espressione}) $$
+$$ A \to \epsilon \mid E, \ A \quad (\text{Argomenti attuali}) $$
+
+\subsubsection{Gestione dei Tipi e della Tabella dei Simboli}
+
+\paragraph{Tipi delle funzioni}
+Il tipo di una funzione deve codificare sia il valore di ritorno che i parametri formali. Si usa spesso un costruttore di tipo $fun$ (es. $fun(integer, integer) \to void$). Il tipo speciale \textbf{void} indica l'assenza di parametri o di valore di ritorno.
+
+\paragraph{Gestione dello Scope (Tabella dei Simboli)}
+Sia $s$ la tabella dei simboli corrente (in uso prima della definizione della funzione). Quando il parser incontra la produzione $D \to \textbf{define } \dots$, si eseguono le seguenti azioni:
+
+\begin{enumerate}
+    \item \textbf{Registrazione:} Il nome della funzione ($id$) viene aggiunto alla tabella $s$ per essere visibile globalmente.
+    \item \textbf{Creazione Ambiente:} Si salva l'ambiente corrente e se ne crea uno nuovo per il corpo della funzione:
+    $$ Env.push(top); \quad top = newEnv(top); $$
+    Passando $top$ a $newEnv$, la nuova tabella viene collegata alla precedente (concatenazione degli scope).
+    \item \textbf{Parametri Formali:} I parametri definiti in $F$ vengono inseriti nella nuova tabella $top$ (trattati in modo analogo ai campi di un record).
+    \item \textbf{Traduzione:} La nuova tabella viene usata per tradurre il corpo $S$.
+    \item \textbf{Ripristino:} Al termine, si ripristina la tabella precedente ($Env.pop()$).
+\end{enumerate}
+
+\paragraph{Controllo dei Tipi}
+Le funzioni sono trattate come operatori. Se c'è discrepanza tra il tipo del parametro formale (es. \textit{real}) e quello attuale (es. \textit{integer}), il compilatore può inserire automaticamente conversioni di tipo, trasformando ad esempio $f(2)$ in $f(\text{intToReal}(2))$.
+
+\subsubsection{Traduzione della Chiamata di Funzione}
+
+La traduzione di una chiamata $id(E_1, \dots, E_n)$ avviene in tre fasi logiche:
+
+\begin{enumerate}
+    \item \textbf{Valutazione Argomenti:} Si genera il codice per ridurre ogni espressione $E_i$ a un indirizzo o valore temporaneo.
+    \item \textbf{Passaggio Parametri:} Si genera un'istruzione \texttt{param} per ogni valore calcolato.
+    \item \textbf{Chiamata:} Si genera l'istruzione \texttt{call id, n} (dove $n$ è il numero di parametri).
+\end{enumerate}
+
+\paragraph{Esempio Pratico}
+Traduzione dell'istruzione $n = f(a[i])$ (assumendo interi a 4 byte):
+
+\begin{lstlisting}[mathescape=true]
+t1 = i * 4       // Calcolo offset array
+t2 = a[t1]       // Accesso al valore: valutazione argomento
+param t2         // Istruzione param
+t3 = call f, 1   // Chiamata a f con 1 parametro
+n = t3           // Assegnamento risultato
+\end{lstlisting}
